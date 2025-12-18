@@ -1,11 +1,6 @@
-// Chat message UndoHistory
-
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
 import '../models/message.dart';
 import '../models/learning_profile.dart';
-import '../providers/message_provider.dart';
 
 class ChatHistory extends StatelessWidget {
   final List<Message> messages;
@@ -37,78 +32,87 @@ class ChatHistory extends StatelessWidget {
                 isStudent ? MainAxisAlignment.end : MainAxisAlignment.start,
             children: [
               if (!isStudent) ...[
-                CircleAvatar(
-                  backgroundColor: Theme.of(context).colorScheme.tertiary,
-                  child: const Text('A', style: TextStyle(color: Colors.white)),
-                ),
+                _buildAvatar(context, false),
                 const SizedBox(width: 12),
               ],
               Flexible(
-                child: Column(
-                  crossAxisAlignment: isStudent
-                      ? CrossAxisAlignment.end
-                      : CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: isStudent
-                            ? Theme.of(context).colorScheme.primary
-                            : Theme.of(context).cardColor,
-                        borderRadius: BorderRadius.only(
-                          topLeft: const Radius.circular(16),
-                          topRight: const Radius.circular(16),
-                          bottomLeft: Radius.circular(isStudent ? 16 : 4),
-                          bottomRight: Radius.circular(isStudent ? 4 : 16),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: isStudent
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).cardColor,
+                    borderRadius: BorderRadius.circular(16).copyWith(
+                      topLeft: isStudent ? const Radius.circular(16) : Radius.zero,
+                      topRight: isStudent ? Radius.zero : const Radius.circular(16),
+                    ),
+                    border: isStudent
+                        ? null
+                        : Border.all(
+                            color: Theme.of(context).dividerColor,
+                          ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (message.imageUrl != null) ...[
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            message.imageUrl!,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                      Text(
+                        message.content,
+                        style: TextStyle(
+                          fontSize: 15,
+                          height: 1.5,
+                          color: isStudent
+                              ? Colors.white
+                              : Theme.of(context).textTheme.bodyLarge?.color,
                         ),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            message.content,
-                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                  color: isStudent
-                                      ? Theme.of(context).colorScheme.onPrimary
-                                      : null,
-                                ),
-                          ),
-                          if (message.imageUrl != null) ...[
-                            const SizedBox(height: 12),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
-                                message.imageUrl!,
-                                width: 200,
-                                fit: BoxFit.cover,
+                      if (!isStudent && message.relatedConcepts != null) ...[
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: message.relatedConcepts!.map((concept) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
                               ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      DateFormat('h:mm a').format(message.timestamp),
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                    if (!isStudent && message.hints != null) ...[
-                      const SizedBox(height: 8),
-                      _buildHintsSection(context, message),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .primary
+                                    .withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                concept,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Theme.of(context).colorScheme.primary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ],
                     ],
-                    if (!isStudent && message.hasVideo == true) ...[
-                      const SizedBox(height: 8),
-                      _buildVideoSection(context, message),
-                    ],
-                  ],
+                  ),
                 ),
               ),
               if (isStudent) ...[
                 const SizedBox(width: 12),
-                CircleAvatar(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  child: const Icon(Icons.person, color: Colors.white),
-                ),
+                _buildAvatar(context, true),
               ],
             ],
           ),
@@ -117,74 +121,20 @@ class ChatHistory extends StatelessWidget {
     );
   }
 
-  Widget _buildHintsSection(BuildContext context, Message message) {
-    final currentIndex = message.currentHintIndex ?? 0;
-    final hasMoreHints = currentIndex < (message.hints?.length ?? 0) - 1;
-
-    return Card(
-      color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.01),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.lightbulb_outline,
-                  size: 20,
-                  color: Theme.of(context).colorScheme.tertiary,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Hint ${currentIndex + 1}/${message.hints?.length ?? 0}',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.tertiary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              message.hints![currentIndex],
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            if (hasMoreHints) ...[
-              const SizedBox(height: 8),
-              TextButton(
-                onPressed: () {
-                  context.read<MessageProvider>().updateMessageHint(
-                        subject,
-                        message.id,
-                        currentIndex + 1,
-                      );
-                },
-                child: const Text('Show next hint'),
-              ),
-            ],
-          ],
-        ),
+  Widget _buildAvatar(BuildContext context, bool isStudent) {
+    return Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        color: isStudent
+            ? Theme.of(context).colorScheme.primary
+            : Theme.of(context).colorScheme.secondary,
+        shape: BoxShape.circle,
       ),
-    );
-  }
-
-  Widget _buildVideoSection(BuildContext context, Message message) {
-    return Card(
-      child: ListTile(
-        leading: Icon(
-          Icons.play_circle_outline,
-          color: Theme.of(context).colorScheme.primary,
-        ),
-        title: const Text('Watch Video Explanation'),
-        subtitle: const Text('Learn this concept visually'),
-        trailing: const Icon(Icons.arrow_forward),
-        onTap: () {
-          // Open video player
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Video player coming soon!')),
-          );
-        },
+      child: Icon(
+        isStudent ? Icons.person : Icons.smart_toy,
+        color: Colors.white,
+        size: 20,
       ),
     );
   }

@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/profile_provider.dart';
-import '../providers/theme_provider.dart';
 import '../models/learning_profile.dart';
+import '../providers/profile_provider.dart';
 import 'tutoring_view.dart';
 import 'practice_zone.dart';
-import 'progress_dashboard.dart';
 import 'badges_view.dart';
-import 'study_plan_view.dart';
+import 'progress_dashboard.dart';
 
 class MainInterface extends StatefulWidget {
   const MainInterface({super.key});
@@ -17,17 +15,8 @@ class MainInterface extends StatefulWidget {
 }
 
 class _MainInterfaceState extends State<MainInterface> {
-  int _currentIndex = 0;
+  int _selectedIndex = 0;
   Subject _currentSubject = Subject.mathematics;
-
-  @override
-  void initState() {
-    super.initState();
-    final profile = context.read<ProfileProvider>().profile;
-    if (profile != null) {
-      _currentSubject = profile.preferredSubject;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,155 +28,119 @@ class _MainInterfaceState extends State<MainInterface> {
       );
     }
 
-    final views = [
-      TutoringView(subject: _currentSubject),
-      PracticeZone(subject: _currentSubject),
-      const ProgressDashboard(),
-      const BadgesView(),
-      const StudyPlanView(),
-    ];
-
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_getTitle()),
-        actions: [
-          // Subject switcher (only show on tutor and practice tabs)
-          if (_currentIndex < 2)
-            PopupMenuButton<Subject>(
-              icon: Icon(_getSubjectIcon(_currentSubject)),
-              onSelected: (subject) {
-                setState(() {
-                  _currentSubject = subject;
-                });
-              },
-              itemBuilder: (context) => Subject.values.map((subject) {
-                return PopupMenuItem(
-                  value: subject,
-                  child: Row(
-                    children: [
-                      Icon(_getSubjectIcon(subject)),
-                      const SizedBox(width: 12),
-                      Text(subject.displayName),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: [
+          TutoringView(subject: _currentSubject),
+          const PracticeZone(),
+          const BadgesView(),
+          const ProgressDashboard(),
+        ],
+      ),
+      bottomNavigationBar: _buildBottomNavigation(context),
+    );
+  }
 
-          // Theme toggle
-          IconButton(
-            icon: Icon(
-              context.watch<ThemeProvider>().isDarkMode
-                  ? Icons.light_mode
-                  : Icons.dark_mode,
-            ),
-            onPressed: () {
-              context.read<ThemeProvider>().toggleTheme();
-            },
+  Widget _buildBottomNavigation(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
           ),
-
-          // Profile menu
-          PopupMenuButton<void>(
-            icon: CircleAvatar(
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              child: Text(
-                profile.studentName[0].toUpperCase(),
-                style:
-                    TextStyle(color: Theme.of(context).colorScheme.onPrimary),
+        ],
+      ),
+      child: SafeArea(
+        child: SizedBox(
+          height: 72,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildNavItem(
+                context: context,
+                index: 0,
+                icon: Icons.chat_bubble_outline,
+                activeIcon: Icons.chat_bubble,
+                label: 'Chat',
               ),
-            ),
-            itemBuilder: (context) => <PopupMenuEntry<void>>[
-              PopupMenuItem<void>(
-                enabled: false,
-                child: ListTile(
-                  leading: const Icon(Icons.person),
-                  title: Text(profile.studentName),
-                  subtitle: Text('Grade ${profile.grade.number}'),
-                  contentPadding: EdgeInsets.zero,
-                ),
+              _buildNavItem(
+                context: context,
+                index: 1,
+                icon: Icons.school_outlined,
+                activeIcon: Icons.school,
+                label: 'Practice',
               ),
-              const PopupMenuDivider(),
-              PopupMenuItem<void>(
-                onTap: () async {
-                  await context.read<ProfileProvider>().clearProfile();
-                },
-                child: const ListTile(
-                  leading: Icon(Icons.logout),
-                  title: Text('Sign Out'),
-                  contentPadding: EdgeInsets.zero,
-                ),
+              _buildNavItem(
+                context: context,
+                index: 2,
+                icon: Icons.emoji_events_outlined,
+                activeIcon: Icons.emoji_events,
+                label: 'Rewards',
+              ),
+              _buildNavItem(
+                context: context,
+                index: 3,
+                icon: Icons.person_outline,
+                activeIcon: Icons.person,
+                label: 'Profile',
               ),
             ],
           ),
-        ],
-      ),
-      body: IndexedStack(
-        index: _currentIndex,
-        children: views,
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.chat_bubble_outline),
-            selectedIcon: Icon(Icons.chat_bubble),
-            label: 'Tutor',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.psychology_outlined),
-            selectedIcon: Icon(Icons.psychology),
-            label: 'Practice',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.insights_outlined),
-            selectedIcon: Icon(Icons.insights),
-            label: 'Progress',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.emoji_events_outlined),
-            selectedIcon: Icon(Icons.emoji_events),
-            label: 'Badges',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.calendar_today_outlined),
-            selectedIcon: Icon(Icons.calendar_today),
-            label: 'Study Plan',
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  String _getTitle() {
-    switch (_currentIndex) {
-      case 0:
-        return 'Tutor Anna';
-      case 1:
-        return 'Practice Zone';
-      case 2:
-        return 'My Progress';
-      case 3:
-        return 'Badges';
-      case 4:
-        return 'Study Plan';
-      default:
-        return 'Tutor Anna';
-    }
-  }
+  Widget _buildNavItem({
+    required BuildContext context,
+    required int index,
+    required IconData icon,
+    required IconData activeIcon,
+    required String label,
+  }) {
+    final isSelected = _selectedIndex == index;
 
-  IconData _getSubjectIcon(Subject subject) {
-    switch (subject) {
-      case Subject.mathematics:
-        return Icons.calculate;
-      case Subject.science:
-        return Icons.science;
-      case Subject.socialScience:
-        return Icons.public;
-    }
+    return Expanded(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            setState(() {
+              _selectedIndex = index;
+            });
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  isSelected ? activeIcon : icon,
+                  color: isSelected
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(context).textTheme.bodyMedium?.color,
+                  size: 26,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                    color: isSelected
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).textTheme.bodyMedium?.color,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

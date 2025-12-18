@@ -1,85 +1,59 @@
-// Chat messages state management
-
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/message.dart';
 import '../models/learning_profile.dart';
 
-class MessageProvider with ChangeNotifier {
-  final SharedPreferences _prefs;
-  final Map<Subject, List<Message>> _messagesBySubject = {};
-
-  MessageProvider(this._prefs) {
-    _loadMessages();
-  }
+class MessageProvider extends ChangeNotifier {
+  final Map<Subject, List<Message>> _messagesBySubject = {
+    Subject.mathematics: [],
+    Subject.science: [],
+    Subject.socialScience: [],
+  };
 
   List<Message> getMessages(Subject subject) {
     return _messagesBySubject[subject] ?? [];
   }
 
   Future<void> addMessage(Subject subject, Message message) async {
-    if (!_messagesBySubject.containsKey(subject)) {
-      _messagesBySubject[subject] = [];
-    }
-    _messagesBySubject[subject]!.add(message);
-    await _saveMessages(subject);
+    _messagesBySubject[subject]?.add(message);
     notifyListeners();
-  }
-
-  Future<void> updateMessageHint(Subject subject, String messageId, int hintIndex) async {
-    final messages = _messagesBySubject[subject];
-    if (messages != null) {
-      final index = messages.indexWhere((m) => m.id == messageId);
-      if (index != -1) {
-        final oldMessage = messages[index];
-        messages[index] = Message(
-          id: oldMessage.id,
-          role: oldMessage.role,
-          content: oldMessage.content,
-          timestamp: oldMessage.timestamp,
-          imageUrl: oldMessage.imageUrl,
-          hints: oldMessage.hints,
-          currentHintIndex: hintIndex,
-          hasVideo: oldMessage.hasVideo,
-        );
-        await _saveMessages(subject);
-        notifyListeners();
-      }
-    }
+    await _saveMessages(subject);
   }
 
   Future<void> clearMessages(Subject subject) async {
-    _messagesBySubject[subject] = [];
+    _messagesBySubject[subject]?.clear();
+    notifyListeners();
     await _saveMessages(subject);
-    notifyListeners();
-  }
-
-  Future<void> _loadMessages() async {
-    for (var subject in Subject.values) {
-      final key = 'messages_${subject.name}';
-      final jsonString = _prefs.getString(key);
-      if (jsonString != null) {
-        try {
-          final List<dynamic> jsonList = json.decode(jsonString);
-          _messagesBySubject[subject] = jsonList
-              .map((json) => Message.fromJson(json))
-              .toList();
-        } catch (e) {
-          debugPrint('Error loading messages for $subject: $e');
-          _messagesBySubject[subject] = [];
-        }
-      }
-    }
-    notifyListeners();
   }
 
   Future<void> _saveMessages(Subject subject) async {
-    final key = 'messages_${subject.name}';
-    final messages = _messagesBySubject[subject] ?? [];
-    final jsonString = json.encode(
-      messages.map((m) => m.toJson()).toList(),
-    );
-    await _prefs.setString(key, jsonString);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final messages = _messagesBySubject[subject] ?? [];
+      final messagesJson = jsonEncode(
+        messages.map((m) => m.toJson()).toList(),
+      );
+      await prefs.setString('messages_${subject.name}', messagesJson);
+    } catch (e) {
+      debugPrint('Error saving messages: $e');
+    }
+  }
+
+  Future<void> loadMessages(Subject subject) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final messagesJson = prefs.getString('messages_${subject.name}');
+
+      if (messagesJson != null) {
+        final List<dynamic> decoded = jsonDecode(messagesJson);
+        _messagesBySubject[subject] = decoded
+            .map((json) => Message.fromJson(json as Map<String, dynamic>))
+            .toList();
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error loading messages: $e');
+    }
   }
 }

@@ -1,5 +1,3 @@
-// Profile, Badge, Goal, LearningGoal, ConceptMastery
-
 enum Subject { mathematics, science, socialScience }
 
 enum Grade { six, seven, eight, nine, ten, eleven, twelve }
@@ -107,72 +105,19 @@ class LearningProfile {
     required this.grade,
     required this.preferredLanguage,
     required this.preferredSubject,
-    required this.streakDays,
-    required this.totalStudyTime,
-    required this.questionsAsked,
-    required this.practiceCompleted,
+    this.streakDays = 0,
+    this.totalStudyTime = 0,
+    this.questionsAsked = 0,
+    this.practiceCompleted = 0,
     this.practiceQuestionsCompleted = 0,
-    required this.badges,
-    required this.goals,
+    this.badges = const [],
+    this.goals = const [],
     this.learningGoals = const [],
-    required this.conceptMastery,
-    required this.strengths,
-    required this.areasForImprovement,
-    required this.lastActive,
-  });
-
-  Map<String, dynamic> toJson() {
-    return {
-      'studentName': studentName,
-      'grade': grade.name,
-      'preferredLanguage': preferredLanguage.name,
-      'preferredSubject': preferredSubject.name,
-      'streakDays': streakDays,
-      'totalStudyTime': totalStudyTime,
-      'questionsAsked': questionsAsked,
-      'practiceCompleted': practiceCompleted,
-      'practiceQuestionsCompleted': practiceQuestionsCompleted,
-      'badges': badges.map((b) => b.toJson()).toList(),
-      'goals': goals.map((g) => g.toJson()).toList(),
-      'learningGoals': learningGoals.map((g) => g.toJson()).toList(),
-      'conceptMastery': conceptMastery.map((c) => c.toJson()).toList(),
-      'strengths': strengths,
-      'areasForImprovement': areasForImprovement,
-      'lastActive': lastActive.toIso8601String(),
-    };
-  }
-
-  factory LearningProfile.fromJson(Map<String, dynamic> json) {
-    return LearningProfile(
-      studentName: json['studentName'],
-      grade: Grade.values.firstWhere((g) => g.name == json['grade']),
-      preferredLanguage: Language.values
-          .firstWhere((l) => l.name == json['preferredLanguage']),
-      preferredSubject:
-          Subject.values.firstWhere((s) => s.name == json['preferredSubject']),
-      streakDays: json['streakDays'] ?? 0,
-      totalStudyTime: json['totalStudyTime'] ?? 0,
-      questionsAsked: json['questionsAsked'] ?? 0,
-      practiceCompleted: json['practiceCompleted'] ?? 0,
-      practiceQuestionsCompleted: json['practiceQuestionsCompleted'] ?? 0,
-      badges:
-          (json['badges'] as List?)?.map((b) => Badge.fromJson(b)).toList() ??
-              [],
-      goals:
-          (json['goals'] as List?)?.map((g) => Goal.fromJson(g)).toList() ?? [],
-      learningGoals: (json['learningGoals'] as List?)
-              ?.map((g) => LearningGoal.fromJson(g))
-              .toList() ??
-          [],
-      conceptMastery: (json['conceptMastery'] as List?)
-              ?.map((c) => ConceptMastery.fromJson(c))
-              .toList() ??
-          [],
-      strengths: List<String>.from(json['strengths'] ?? []),
-      areasForImprovement: List<String>.from(json['areasForImprovement'] ?? []),
-      lastActive: DateTime.parse(json['lastActive']),
-    );
-  }
+    this.conceptMastery = const [],
+    this.strengths = const [],
+    this.areasForImprovement = const [],
+    DateTime? lastActive,
+  }) : lastActive = lastActive ?? DateTime.now();
 
   LearningProfile copyWith({
     String? studentName,
@@ -201,8 +146,7 @@ class LearningProfile {
       totalStudyTime: totalStudyTime ?? this.totalStudyTime,
       questionsAsked: questionsAsked ?? this.questionsAsked,
       practiceCompleted: practiceCompleted ?? this.practiceCompleted,
-      practiceQuestionsCompleted:
-          practiceQuestionsCompleted ?? this.practiceQuestionsCompleted,
+      practiceQuestionsCompleted: practiceQuestionsCompleted ?? this.practiceQuestionsCompleted,
       badges: badges ?? this.badges,
       goals: goals ?? this.goals,
       learningGoals: learningGoals ?? this.learningGoals,
@@ -210,6 +154,67 @@ class LearningProfile {
       strengths: strengths ?? this.strengths,
       areasForImprovement: areasForImprovement ?? this.areasForImprovement,
       lastActive: lastActive ?? this.lastActive,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'studentName': studentName,
+      'grade': grade.number,
+      'preferredLanguage': preferredLanguage.name,
+      'preferredSubject': preferredSubject.name,
+      'streakDays': streakDays,
+      'totalStudyTime': totalStudyTime,
+      'questionsAsked': questionsAsked,
+      'practiceCompleted': practiceCompleted,
+      'practiceQuestionsCompleted': practiceQuestionsCompleted,
+      'badges': badges.map((b) => b.toJson()).toList(),
+      'goals': goals.map((g) => g.toJson()).toList(),
+      'learningGoals': learningGoals.map((g) => g.toJson()).toList(),
+      'conceptMastery': conceptMastery.map((c) => c.toJson()).toList(),
+      'strengths': strengths,
+      'areasForImprovement': areasForImprovement,
+      'lastActive': lastActive.toIso8601String(),
+    };
+  }
+
+  factory LearningProfile.fromJson(Map<String, dynamic> json) {
+    return LearningProfile(
+      studentName: json['studentName'] as String,
+      grade: Grade.values.firstWhere((g) => g.number == json['grade']),
+      preferredLanguage: Language.values.firstWhere(
+        (l) => l.name == json['preferredLanguage'],
+      ),
+      preferredSubject: Subject.values.firstWhere(
+        (s) => s.name == json['preferredSubject'],
+      ),
+      streakDays: json['streakDays'] as int? ?? 0,
+      totalStudyTime: json['totalStudyTime'] as int? ?? 0,
+      questionsAsked: json['questionsAsked'] as int? ?? 0,
+      practiceCompleted: json['practiceCompleted'] as int? ?? 0,
+      practiceQuestionsCompleted: json['practiceQuestionsCompleted'] as int? ?? 0,
+      badges: (json['badges'] as List<dynamic>?)
+              ?.map((b) => Badge.fromJson(b as Map<String, dynamic>))
+              .toList() ??
+          [],
+      goals: (json['goals'] as List<dynamic>?)
+              ?.map((g) => Goal.fromJson(g as Map<String, dynamic>))
+              .toList() ??
+          [],
+      learningGoals: (json['learningGoals'] as List<dynamic>?)
+              ?.map((g) => LearningGoal.fromJson(g as Map<String, dynamic>))
+              .toList() ??
+          [],
+      conceptMastery: (json['conceptMastery'] as List<dynamic>?)
+              ?.map((c) => ConceptMastery.fromJson(c as Map<String, dynamic>))
+              .toList() ??
+          [],
+      strengths: (json['strengths'] as List<dynamic>?)?.cast<String>() ?? [],
+      areasForImprovement:
+          (json['areasForImprovement'] as List<dynamic>?)?.cast<String>() ?? [],
+      lastActive: json['lastActive'] != null
+          ? DateTime.parse(json['lastActive'] as String)
+          : null,
     );
   }
 }
@@ -241,11 +246,11 @@ class Badge {
 
   factory Badge.fromJson(Map<String, dynamic> json) {
     return Badge(
-      id: json['id'],
-      name: json['name'],
-      description: json['description'],
-      earnedDate: DateTime.parse(json['earnedDate']),
-      icon: json['icon'],
+      id: json['id'] as String,
+      name: json['name'] as String,
+      description: json['description'] as String,
+      earnedDate: DateTime.parse(json['earnedDate'] as String),
+      icon: json['icon'] as String,
     );
   }
 }
@@ -280,11 +285,11 @@ class Goal {
 
   factory Goal.fromJson(Map<String, dynamic> json) {
     return Goal(
-      id: json['id'],
-      title: json['title'],
-      description: json['description'],
-      targetDate: DateTime.parse(json['targetDate']),
-      isCompleted: json['isCompleted'] ?? false,
+      id: json['id'] as String,
+      title: json['title'] as String,
+      description: json['description'] as String,
+      targetDate: DateTime.parse(json['targetDate'] as String),
+      isCompleted: json['isCompleted'] as bool? ?? false,
       subject: Subject.values.firstWhere((s) => s.name == json['subject']),
     );
   }
@@ -313,8 +318,8 @@ class LearningGoal {
   final String title;
   final DateTime targetDate;
   final Subject subject;
-  double progress;
-  bool completed;
+  final double progress;
+  final bool completed;
 
   LearningGoal({
     required this.id,
@@ -338,12 +343,12 @@ class LearningGoal {
 
   factory LearningGoal.fromJson(Map<String, dynamic> json) {
     return LearningGoal(
-      id: json['id'],
-      title: json['title'],
-      targetDate: DateTime.parse(json['targetDate']),
+      id: json['id'] as String,
+      title: json['title'] as String,
+      targetDate: DateTime.parse(json['targetDate'] as String),
       subject: Subject.values.firstWhere((s) => s.name == json['subject']),
-      progress: json['progress']?.toDouble() ?? 0.0,
-      completed: json['completed'] ?? false,
+      progress: (json['progress'] as num?)?.toDouble() ?? 0.0,
+      completed: json['completed'] as bool? ?? false,
     );
   }
 
@@ -390,10 +395,10 @@ class ConceptMastery {
 
   factory ConceptMastery.fromJson(Map<String, dynamic> json) {
     return ConceptMastery(
-      conceptName: json['conceptName'],
+      conceptName: json['conceptName'] as String,
       subject: Subject.values.firstWhere((s) => s.name == json['subject']),
-      masteryLevel: json['masteryLevel'].toDouble(),
-      lastPracticed: DateTime.parse(json['lastPracticed']),
+      masteryLevel: (json['masteryLevel'] as num).toDouble(),
+      lastPracticed: DateTime.parse(json['lastPracticed'] as String),
     );
   }
 }

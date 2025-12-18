@@ -1,5 +1,3 @@
-// Language selection widget
-
 import 'package:flutter/material.dart';
 import '../models/learning_profile.dart';
 
@@ -15,54 +13,42 @@ class LanguageSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 1.2,
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context).dividerColor,
+          width: 1.5,
+        ),
       ),
-      itemCount: Language.values.length,
-      itemBuilder: (context, index) {
-        final language = Language.values[index];
-        final isSelected = selectedLanguage == language;
-
-        return Material(
-          color: isSelected
-              ? Theme.of(context).colorScheme.primary
-              : Theme.of(context).cardColor,
-          borderRadius: BorderRadius.circular(12),
-          child: InkWell(
-            onTap: () => onLanguageSelected(language),
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: isSelected
-                      ? Theme.of(context).colorScheme.primary
-                      : Theme.of(context).dividerColor,
-                  width: 2,
-                ),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Center(
-                child: Text(
-                  language.displayName,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: isSelected
-                            ? Theme.of(context).colorScheme.onPrimary
-                            : null,
-                        fontWeight: isSelected ? FontWeight.bold : null,
-                      ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
+      child: DropdownButton<Language>(
+        value: selectedLanguage,
+        isExpanded: true,
+        underline: const SizedBox(),
+        icon: const Icon(Icons.keyboard_arrow_down),
+        hint: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12),
+          child: Text('Select language'),
+        ),
+        style: Theme.of(context).textTheme.titleMedium,
+        borderRadius: BorderRadius.circular(12),
+        items: Language.values.map((language) {
+          return DropdownMenuItem<Language>(
+            value: language,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Text(language.displayName),
             ),
-          ),
-        );
-      },
+          );
+        }).toList(),
+        onChanged: (language) {
+          if (language != null) {
+            onLanguageSelected(language);
+          }
+        },
+      ),
     );
   }
 }

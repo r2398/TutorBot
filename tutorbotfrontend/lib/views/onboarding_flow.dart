@@ -14,45 +14,92 @@ class OnboardingFlow extends StatefulWidget {
   State<OnboardingFlow> createState() => _OnboardingFlowState();
 }
 
-class _OnboardingFlowState extends State<OnboardingFlow> {
+class _OnboardingFlowState extends State<OnboardingFlow>
+    with TickerProviderStateMixin {
   final PageController _pageController = PageController();
-  int _currentPage = 0;
+  final TextEditingController _nameController = TextEditingController();
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
 
-  // Form data
+  int _currentPage = 0;
   String _studentName = '';
   Grade? _selectedGrade;
   Language? _selectedLanguage;
   Subject? _selectedSubject;
 
   @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeIn),
+    );
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _nameController.dispose();
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
-            // Progress indicator
+            // Top branding
             Padding(
               padding: const EdgeInsets.all(24),
-              child: Row(
-                children: List.generate(
-                  4,
-                  (index) => Expanded(
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: index <= _currentPage
-                            ? Theme.of(context).colorScheme.primary
-                            : Theme.of(context).colorScheme.secondary,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
+              child: Column(
+                children: [
+                  Text(
+                    'Tutor Anna',
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                   ),
-                ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Let\'s get you started',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
               ),
             ),
 
-            // Scrollable content
+            // Progress dots
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(4, (index) {
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    width: index == _currentPage ? 32 : 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: index <= _currentPage
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).dividerColor,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  );
+                }),
+              ),
+            ),
+
+            const SizedBox(height: 32),
+
+            // Content
             Expanded(
               child: PageView(
                 controller: _pageController,
@@ -61,9 +108,11 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                   setState(() {
                     _currentPage = page;
                   });
+                  _animationController.reset();
+                  _animationController.forward();
                 },
                 children: [
-                  _buildWelcomePage(),
+                  _buildNamePage(),
                   _buildGradePage(),
                   _buildLanguagePage(),
                   _buildSubjectPage(),
@@ -90,9 +139,12 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                     ),
                   if (_currentPage > 0) const SizedBox(width: 16),
                   Expanded(
+                    flex: _currentPage > 0 ? 1 : 2,
                     child: ElevatedButton(
                       onPressed: _canProceed() ? _handleNext : null,
-                      child: Text(_currentPage == 3 ? 'Get Started' : 'Continue'),
+                      child: Text(
+                        _currentPage == 3 ? 'Start Learning' : 'Next',
+                      ),
                     ),
                   ),
                 ],
@@ -104,183 +156,213 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     );
   }
 
-  Widget _buildWelcomePage() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const SizedBox(height: 40),
-          Icon(
-            Icons.school_rounded,
-            size: 100,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-          const SizedBox(height: 32),
-          Text(
-            'I\'m Tutor Anna!',
-            style: Theme.of(context).textTheme.displaySmall,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Your personal AI tutor for grades 6-12',
-            style: Theme.of(context).textTheme.titleMedium,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 48),
-          TextField(
-            decoration: const InputDecoration(
-              labelText: 'What\'s your name?',
-              hintText: 'Enter your name',
-              prefixIcon: Icon(Icons.person),
-              border: OutlineInputBorder(),
-            ),
-            onChanged: (value) {
-              setState(() {
-                _studentName = value;
-              });
-            },
-          ),
-          const SizedBox(height: 24),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.tips_and_updates,
-                    color: Theme.of(context).colorScheme.tertiary,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Tutor Anna helps you learn at your own pace with personalized guidance',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+  Widget _buildNamePage() {
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          children: [
+            const SizedBox(height: 40),
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.person_outline,
+                size: 40,
+                color: Theme.of(context).colorScheme.primary,
               ),
             ),
-          ),
-          const SizedBox(height: 40),
-        ],
+            const SizedBox(height: 32),
+            Text(
+              'What\'s your name?',
+              style: Theme.of(context).textTheme.displaySmall,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'This helps us personalize your learning',
+              style: Theme.of(context).textTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 48),
+            TextField(
+              controller: _nameController,
+              decoration: const InputDecoration(
+                hintText: 'Type your name',
+                prefixIcon: Icon(Icons.person),
+              ),
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+              textCapitalization: TextCapitalization.words,
+              onChanged: (value) {
+                setState(() {
+                  _studentName = value;
+                });
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildGradePage() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const SizedBox(height: 40),
-          Icon(
-            Icons.class_,
-            size: 80,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'Select your grade',
-            style: Theme.of(context).textTheme.headlineMedium,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'This helps us customize content for your level',
-            style: Theme.of(context).textTheme.bodyLarge,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 32),
-          GradeSelector(
-            selectedGrade: _selectedGrade,
-            onGradeSelected: (grade) {
-              setState(() {
-                _selectedGrade = grade;
-              });
-            },
-          ),
-          const SizedBox(height: 40),
-        ],
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          children: [
+            const SizedBox(height: 40),
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.school_outlined,
+                size: 40,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            const SizedBox(height: 32),
+            Text(
+              'Which grade are you in?',
+              style: Theme.of(context).textTheme.displaySmall,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'We\'ll match content to your level',
+              style: Theme.of(context).textTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 48),
+            GradeSelector(
+              selectedGrade: _selectedGrade,
+              onGradeSelected: (grade) {
+                setState(() {
+                  _selectedGrade = grade;
+                });
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildLanguagePage() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const SizedBox(height: 40),
-          Icon(
-            Icons.language,
-            size: 80,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'Choose your language',
-            style: Theme.of(context).textTheme.headlineMedium,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'I can help you learn in your preferred language',
-            style: Theme.of(context).textTheme.bodyLarge,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 32),
-          LanguageSelector(
-            selectedLanguage: _selectedLanguage,
-            onLanguageSelected: (language) {
-              setState(() {
-                _selectedLanguage = language;
-              });
-            },
-          ),
-          const SizedBox(height: 40),
-        ],
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          children: [
+            const SizedBox(height: 40),
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.language,
+                size: 40,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            const SizedBox(height: 32),
+            Text(
+              'Choose your language',
+              style: Theme.of(context).textTheme.displaySmall,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Learn in the language you prefer',
+              style: Theme.of(context).textTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 48),
+            LanguageSelector(
+              selectedLanguage: _selectedLanguage,
+              onLanguageSelected: (language) {
+                setState(() {
+                  _selectedLanguage = language;
+                });
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildSubjectPage() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const SizedBox(height: 40),
-          Icon(
-            Icons.menu_book,
-            size: 80,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'Pick your favorite subject',
-            style: Theme.of(context).textTheme.headlineMedium,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'You can always change this later',
-            style: Theme.of(context).textTheme.bodyLarge,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 32),
-          SubjectSelector(
-            selectedSubject: _selectedSubject,
-            onSubjectSelected: (subject) {
-              setState(() {
-                _selectedSubject = subject;
-              });
-            },
-          ),
-          const SizedBox(height: 40),
-        ],
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          children: [
+            const SizedBox(height: 40),
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.menu_book,
+                size: 40,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            const SizedBox(height: 32),
+            Text(
+              'Choose a subject',
+              style: Theme.of(context).textTheme.displaySmall,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'You can always switch later',
+              style: Theme.of(context).textTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 48),
+            SubjectSelector(
+              selectedSubject: _selectedSubject,
+              onSubjectSelected: (subject) {
+                setState(() {
+                  _selectedSubject = subject;
+                });
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -300,48 +382,61 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     }
   }
 
-  void _handleNext() async {
+  Future<void> _handleNext() async {
     if (_currentPage < 3) {
-      _pageController.nextPage(
+      await _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
     } else {
-      // Create profile with correct parameter name: lastActive
-      final profile = LearningProfile(
-        studentName: _studentName.trim(),
-        grade: _selectedGrade!,
-        preferredLanguage: _selectedLanguage!,
-        preferredSubject: _selectedSubject!,
-        streakDays: 0,
-        totalStudyTime: 0,
-        questionsAsked: 0,
-        practiceCompleted: 0,
-        badges: [],
-        goals: [],
-        conceptMastery: [],
-        strengths: [],
-        areasForImprovement: [],
-        lastActive: DateTime.now(), // Changed from lastActiveDate
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
       );
 
-      // Save profile
-      await context.read<ProfileProvider>().saveProfile(profile);
-
-      // Navigate to main interface
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => const MainInterface(),
-          ),
+      try {
+        final profile = LearningProfile(
+          studentName: _studentName.trim(),
+          grade: _selectedGrade!,
+          preferredLanguage: _selectedLanguage!,
+          preferredSubject: _selectedSubject!,
+          streakDays: 0,
+          totalStudyTime: 0,
+          questionsAsked: 0,
+          practiceCompleted: 0,
+          badges: [],
+          goals: [],
+          conceptMastery: [],
+          strengths: [],
+          areasForImprovement: [],
+          lastActive: DateTime.now(),
         );
+
+        await context.read<ProfileProvider>().saveProfile(profile);
+
+        if (mounted) {
+          Navigator.of(context).pop(); // Close loading
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => const MainInterface(),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: $e'),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        }
       }
     }
-  }
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
   }
 }

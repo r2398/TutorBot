@@ -1,139 +1,159 @@
-// Learning profile state management
-
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/learning_profile.dart';
 
-class ProfileProvider with ChangeNotifier {
-  final SharedPreferences _prefs;
+class ProfileProvider extends ChangeNotifier {
   LearningProfile? _profile;
-
-  ProfileProvider(this._prefs) {
-    _loadProfile();
-  }
 
   LearningProfile? get profile => _profile;
 
-  void _loadProfile() {
-    final profileJson = _prefs.getString('learningProfile');
-    if (profileJson != null) {
-      _profile = LearningProfile.fromJson(json.decode(profileJson));
-      notifyListeners();
+  Future<void> loadProfile() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final profileJson = prefs.getString('learning_profile');
+
+      if (profileJson != null) {
+        final Map<String, dynamic> decoded = jsonDecode(profileJson);
+        _profile = LearningProfile.fromJson(decoded);
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error loading profile: $e');
     }
   }
 
   Future<void> saveProfile(LearningProfile profile) async {
-    _profile = profile;
-    await _prefs.setString('learningProfile', json.encode(profile.toJson()));
-    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final profileJson = jsonEncode(profile.toJson());
+      await prefs.setString('learning_profile', profileJson);
+      _profile = profile;
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error saving profile: $e');
+      rethrow;
+    }
   }
 
-  Future<void> updateProfile(LearningProfile Function(LearningProfile) update) async {
-    if (_profile != null) {
-      _profile = update(_profile!);
-      await _prefs.setString('learningProfile', json.encode(_profile!.toJson()));
-      notifyListeners();
-    }
+  Future<void> updateProfile(LearningProfile profile) async {
+    await saveProfile(profile);
   }
 
   Future<void> incrementQuestionsAsked() async {
     if (_profile != null) {
-      _profile = _profile!.copyWith(
+      final updated = LearningProfile(
+        studentName: _profile!.studentName,
+        grade: _profile!.grade,
+        preferredLanguage: _profile!.preferredLanguage,
+        preferredSubject: _profile!.preferredSubject,
+        streakDays: _profile!.streakDays,
+        totalStudyTime: _profile!.totalStudyTime,
         questionsAsked: _profile!.questionsAsked + 1,
+        practiceCompleted: _profile!.practiceCompleted,
+        badges: _profile!.badges,
+        goals: _profile!.goals,
+        conceptMastery: _profile!.conceptMastery,
+        strengths: _profile!.strengths,
+        areasForImprovement: _profile!.areasForImprovement,
         lastActive: DateTime.now(),
       );
-      await _prefs.setString('learningProfile', json.encode(_profile!.toJson()));
-      notifyListeners();
+      await saveProfile(updated);
     }
   }
 
   Future<void> incrementPracticeCompleted() async {
     if (_profile != null) {
-      _profile = _profile!.copyWith(
+      final updated = LearningProfile(
+        studentName: _profile!.studentName,
+        grade: _profile!.grade,
+        preferredLanguage: _profile!.preferredLanguage,
+        preferredSubject: _profile!.preferredSubject,
+        streakDays: _profile!.streakDays,
+        totalStudyTime: _profile!.totalStudyTime,
+        questionsAsked: _profile!.questionsAsked,
         practiceCompleted: _profile!.practiceCompleted + 1,
-        practiceQuestionsCompleted: _profile!.practiceQuestionsCompleted + 1,
+        practiceQuestionsCompleted:
+            _profile!.practiceQuestionsCompleted + 5,
+        badges: _profile!.badges,
+        goals: _profile!.goals,
+        learningGoals: _profile!.learningGoals,
+        conceptMastery: _profile!.conceptMastery,
+        strengths: _profile!.strengths,
+        areasForImprovement: _profile!.areasForImprovement,
         lastActive: DateTime.now(),
       );
-      await _prefs.setString('learningProfile', json.encode(_profile!.toJson()));
-      notifyListeners();
-    }
-  }
-
-  Future<void> addStudyTime(int minutes) async {
-    if (_profile != null) {
-      _profile = _profile!.copyWith(
-        totalStudyTime: _profile!.totalStudyTime + minutes,
-        lastActive: DateTime.now(),
-      );
-      await _prefs.setString('learningProfile', json.encode(_profile!.toJson()));
-      notifyListeners();
-    }
-  }
-
-  Future<void> updateStreak() async {
-    if (_profile != null) {
-      final lastActive = _profile!.lastActive;
-      final now = DateTime.now();
-      final difference = now.difference(lastActive).inHours;
-      
-      int newStreak = _profile!.streakDays;
-      if (difference >= 24 && difference < 48) {
-        newStreak++;
-      } else if (difference >= 48) {
-        newStreak = 1;
-      }
-
-      _profile = _profile!.copyWith(
-        streakDays: newStreak,
-        lastActive: now,
-      );
-      await _prefs.setString('learningProfile', json.encode(_profile!.toJson()));
-      notifyListeners();
-    }
-  }
-
-  Future<void> addBadge(Badge badge) async {
-    if (_profile != null) {
-      final badges = List<Badge>.from(_profile!.badges);
-      if (!badges.any((b) => b.id == badge.id)) {
-        badges.add(badge);
-        _profile = _profile!.copyWith(badges: badges);
-        await _prefs.setString('learningProfile', json.encode(_profile!.toJson()));
-        notifyListeners();
-      }
+      await saveProfile(updated);
     }
   }
 
   Future<void> addLearningGoal(LearningGoal goal) async {
     if (_profile != null) {
-      final goals = List<LearningGoal>.from(_profile!.learningGoals);
-      goals.add(goal);
-      _profile = _profile!.copyWith(learningGoals: goals);
-      await _prefs.setString('learningProfile', json.encode(_profile!.toJson()));
-      notifyListeners();
+      final updatedGoals = List<LearningGoal>.from(_profile!.learningGoals)
+        ..add(goal);
+
+      final updated = LearningProfile(
+        studentName: _profile!.studentName,
+        grade: _profile!.grade,
+        preferredLanguage: _profile!.preferredLanguage,
+        preferredSubject: _profile!.preferredSubject,
+        streakDays: _profile!.streakDays,
+        totalStudyTime: _profile!.totalStudyTime,
+        questionsAsked: _profile!.questionsAsked,
+        practiceCompleted: _profile!.practiceCompleted,
+        practiceQuestionsCompleted: _profile!.practiceQuestionsCompleted,
+        badges: _profile!.badges,
+        goals: _profile!.goals,
+        learningGoals: updatedGoals,
+        conceptMastery: _profile!.conceptMastery,
+        strengths: _profile!.strengths,
+        areasForImprovement: _profile!.areasForImprovement,
+        lastActive: DateTime.now(),
+      );
+      await saveProfile(updated);
     }
   }
 
   Future<void> updateGoalProgress(String goalId, double progress) async {
     if (_profile != null) {
-      final goals = List<LearningGoal>.from(_profile!.learningGoals);
-      final index = goals.indexWhere((g) => g.id == goalId);
-      if (index != -1) {
-        goals[index].progress = progress;
-        if (progress >= 100) {
-          goals[index].completed = true;
+      final updatedGoals = _profile!.learningGoals.map((goal) {
+        if (goal.id == goalId) {
+          return LearningGoal(
+            id: goal.id,
+            title: goal.title,
+            targetDate: goal.targetDate,
+            subject: goal.subject,
+            progress: progress,
+            completed: progress >= 100,
+          );
         }
-        _profile = _profile!.copyWith(learningGoals: goals);
-        await _prefs.setString('learningProfile', json.encode(_profile!.toJson()));
-        notifyListeners();
-      }
+        return goal;
+      }).toList();
+
+      final updated = LearningProfile(
+        studentName: _profile!.studentName,
+        grade: _profile!.grade,
+        preferredLanguage: _profile!.preferredLanguage,
+        preferredSubject: _profile!.preferredSubject,
+        streakDays: _profile!.streakDays,
+        totalStudyTime: _profile!.totalStudyTime,
+        questionsAsked: _profile!.questionsAsked,
+        practiceCompleted: _profile!.practiceCompleted,
+        practiceQuestionsCompleted: _profile!.practiceQuestionsCompleted,
+        badges: _profile!.badges,
+        goals: _profile!.goals,
+        learningGoals: updatedGoals,
+        conceptMastery: _profile!.conceptMastery,
+        strengths: _profile!.strengths,
+        areasForImprovement: _profile!.areasForImprovement,
+        lastActive: DateTime.now(),
+      );
+      await saveProfile(updated);
     }
   }
 
-  Future<void> clearProfile() async {
+  void clearProfile() {
     _profile = null;
-    await _prefs.remove('learningProfile');
     notifyListeners();
   }
 }

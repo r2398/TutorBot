@@ -1,5 +1,3 @@
-// Chat/tutor interface
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
@@ -9,9 +7,10 @@ import '../providers/message_provider.dart';
 import '../providers/profile_provider.dart';
 import '../utils/tutor_engine.dart';
 import '../widgets/chat_history.dart';
-import '../widgets/voice_interface.dart';
-import '../widgets/image_upload.dart';
-import '../widgets/topic_suggestions.dart';
+import '../widgets/voice_interface_advanced.dart';
+import '../widgets/camera_interface.dart';
+
+enum ChatMode { text, voice, camera }
 
 class TutoringView extends StatefulWidget {
   final Subject subject;
@@ -22,12 +21,13 @@ class TutoringView extends StatefulWidget {
   State<TutoringView> createState() => _TutoringViewState();
 }
 
-class _TutoringViewState extends State<TutoringView> {
+class _TutoringViewState extends State<TutoringView> with SingleTickerProviderStateMixin {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final Uuid _uuid = const Uuid();
   
-  bool _isLoading = false;
+  ChatMode _currentMode = ChatMode.text;
+  // bool _isLoading = false;
   String? _uploadedImageUrl;
 
   @override
@@ -58,7 +58,6 @@ class _TutoringViewState extends State<TutoringView> {
 
     if (profile == null) return;
 
-    // Add student message
     final studentMessage = Message(
       id: _uuid.v4(),
       role: MessageRole.student,
@@ -73,18 +72,14 @@ class _TutoringViewState extends State<TutoringView> {
     _uploadedImageUrl = null;
     _scrollToBottom();
 
-    // Increment questions asked
     await profileProvider.incrementQuestionsAsked();
 
-    // Show loading
-    setState(() {
-      _isLoading = true;
-    });
+    // setState(() {
+    //   _isLoading = true;
+    // });
 
-    // Simulate AI response delay
-    await Future.delayed(const Duration(seconds: 1));
+    await Future.delayed(const Duration(milliseconds: 800));
 
-    // Generate tutor response
     final tutorResponse = TutorEngine.generateResponse(
       content,
       widget.subject,
@@ -106,25 +101,11 @@ class _TutoringViewState extends State<TutoringView> {
 
     await messageProvider.addMessage(widget.subject, tutorMessage);
 
-    setState(() {
-      _isLoading = false;
-    });
+    // setState(() {
+    //   _isLoading = false;
+    // });
 
     _scrollToBottom();
-  }
-
-  void _handleVoiceInput(String text) {
-    _messageController.text = text;
-  }
-
-  void _handleImageUpload(String imageUrl) {
-    setState(() {
-      _uploadedImageUrl = imageUrl;
-    });
-  }
-
-  void _handleTopicSuggestion(String topic) {
-    _sendMessage('Can you help me understand $topic?');
   }
 
   @override
@@ -138,227 +119,225 @@ class _TutoringViewState extends State<TutoringView> {
 
     return Column(
       children: [
-        // Welcome message or chat history
-        Expanded(
-          child: messages.isEmpty
-              ? _buildWelcomeScreen(profile)
-              : ChatHistory(
-                  messages: messages,
-                  subject: widget.subject,
-                  scrollController: _scrollController,
-                ),
-        ),
-
-        // Loading indicator
-        if (_isLoading)
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              children: [
-                const SizedBox(width: 16),
-                const CircularProgressIndicator(),
-                const SizedBox(width: 16),
-                Text(
-                  'Thinking...',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              ],
-            ),
-          ),
-
-        // Image preview
-        if (_uploadedImageUrl != null)
-          Container(
-            padding: const EdgeInsets.all(8),
-            color: Theme.of(context).colorScheme.secondary,
-            child: Row(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    _uploadedImageUrl!,
-                    width: 60,
-                    height: 60,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text('Image attached'),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () {
-                    setState(() {
-                      _uploadedImageUrl = null;
-                    });
-                  },
-                ),
-              ],
-            ),
-          ),
-
-        // Input area
+        // Mode selector
         Container(
-          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 10,
-                offset: const Offset(0, -2),
+            color: Theme.of(context).cardColor,
+            border: Border(
+              bottom: BorderSide(
+                color: Theme.of(context).dividerColor,
+                width: 1,
               ),
-            ],
+            ),
           ),
           child: SafeArea(
-            child: Row(
-              children: [
-                // Image upload button
-                ImageUpload(
-                  onImageSelected: _handleImageUpload,
-                ),
-                const SizedBox(width: 8),
-
-                // Text input
-                Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    decoration: InputDecoration(
-                      hintText: 'Ask me anything about ${widget.subject.displayName}...',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide.none,
-                      ),
-                      filled: true,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 12,
-                      ),
-                    ),
-                    maxLines: null,
-                    textCapitalization: TextCapitalization.sentences,
-                    onSubmitted: (value) => _sendMessage(value, imageUrl: _uploadedImageUrl),
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildModeButton(
+                    mode: ChatMode.voice,
+                    icon: Icons.mic,
+                    label: 'Voice',
                   ),
-                ),
-                const SizedBox(width: 8),
-
-                // Voice input button
-                VoiceInterface(
-                  onTextReceived: _handleVoiceInput,
-                ),
-                const SizedBox(width: 8),
-
-                // Send button
-                CircleAvatar(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  child: IconButton(
-                    icon: Icon(
-                      Icons.send,
-                      color: Theme.of(context).colorScheme.onPrimary,
-                    ),
-                    onPressed: () => _sendMessage(
-                      _messageController.text,
-                      imageUrl: _uploadedImageUrl,
-                    ),
+                  const SizedBox(width: 12),
+                  _buildModeButton(
+                    mode: ChatMode.text,
+                    icon: Icons.chat_bubble,
+                    label: 'Chat',
                   ),
-                ),
-              ],
+                  const SizedBox(width: 12),
+                  _buildModeButton(
+                    mode: ChatMode.camera,
+                    icon: Icons.camera_alt,
+                    label: 'Camera',
+                  ),
+                ],
+              ),
             ),
           ),
         ),
+
+        // Content area
+        Expanded(
+          child: _buildContentArea(messages, profile),
+        ),
+
+        // Input area (only for text mode)
+        if (_currentMode == ChatMode.text) _buildTextInputArea(),
       ],
     );
   }
 
-  Widget _buildWelcomeScreen(LearningProfile profile) {
+  Widget _buildModeButton({
+    required ChatMode mode,
+    required IconData icon,
+    required String label,
+  }) {
+    final isSelected = _currentMode == mode;
+    
+    return Expanded(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        child: Material(
+          color: isSelected
+              ? Theme.of(context).colorScheme.primary
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          child: InkWell(
+            onTap: () {
+              setState(() {
+                _currentMode = mode;
+              });
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    icon,
+                    size: 20,
+                    color: isSelected
+                        ? Colors.white
+                        : Theme.of(context).colorScheme.onSurface,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: isSelected
+                          ? Colors.white
+                          : Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContentArea(List<Message> messages, LearningProfile profile) {
+    switch (_currentMode) {
+      case ChatMode.text:
+        return messages.isEmpty
+            ? _buildEmptyState(profile)
+            : ChatHistory(
+                messages: messages,
+                subject: widget.subject,
+                scrollController: _scrollController,
+              );
+      
+      case ChatMode.voice:
+        return VoiceInterfaceAdvanced(
+          onTextReceived: (text) => _sendMessage(text),
+          subject: widget.subject,
+        );
+      
+      case ChatMode.camera:
+        return CameraInterface(
+          onImageCaptured: (imagePath, text) {
+            _sendMessage(text, imageUrl: imagePath);
+          },
+        );
+    }
+  }
+
+  Widget _buildEmptyState(LearningProfile profile) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const SizedBox(height: 60),
+          Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.waving_hand,
+              size: 50,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          ),
+          const SizedBox(height: 24),
           Text(
-            'Hi ${profile.studentName}! 👋',
-            style: Theme.of(context).textTheme.displayMedium,
+            'Ready to Learn',
+            style: Theme.of(context).textTheme.displaySmall,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Text(
-            'I\'m Tutor Anna, your AI tutor. Ask me anything about ${widget.subject.displayName}!',
-            style: Theme.of(context).textTheme.bodyLarge,
-          ),
-          const SizedBox(height: 32),
-          Text(
-            'Popular topics',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 16),
-          TopicSuggestions(
-            subject: widget.subject,
-            grade: profile.grade,
-            onTopicSelected: _handleTopicSuggestion,
-          ),
-          const SizedBox(height: 32),
-          _buildFeatureCard(
-            icon: Icons.mic,
-            title: 'Voice Input',
-            description: 'Ask questions using your voice',
-          ),
-          const SizedBox(height: 16),
-          _buildFeatureCard(
-            icon: Icons.photo_camera,
-            title: 'Image Upload',
-            description: 'Upload images of problems to solve',
-          ),
-          const SizedBox(height: 16),
-          _buildFeatureCard(
-            icon: Icons.lightbulb_outline,
-            title: 'Step-by-step Hints',
-            description: 'Get hints when you\'re stuck',
-          ),
-          const SizedBox(height: 16),
-          _buildFeatureCard(
-            icon: Icons.play_circle_outline,
-            title: 'Video Resources',
-            description: 'Watch videos to learn concepts',
+            'Ask me anything or tap the mic',
+            style: Theme.of(context).textTheme.bodyMedium,
+            textAlign: TextAlign.center,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildFeatureCard({
-    required IconData icon,
-    required String title,
-    required String description,
-  }) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: 32,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleMedium,
+  Widget _buildTextInputArea() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _messageController,
+                  decoration: InputDecoration(
+                    hintText: 'Type your question here...',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide.none,
+                    ),
+                    filled: true,
+                    fillColor: Theme.of(context).scaffoldBackgroundColor,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 14,
+                    ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    description,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ],
+                  maxLines: null,
+                  textCapitalization: TextCapitalization.sentences,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(width: 12),
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary,
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.send, color: Colors.white),
+                  onPressed: () => _sendMessage(_messageController.text),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

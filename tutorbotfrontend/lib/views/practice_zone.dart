@@ -1,5 +1,3 @@
-// Practice questions
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/learning_profile.dart';
@@ -8,455 +6,587 @@ import '../providers/profile_provider.dart';
 import '../utils/practice_generator.dart';
 
 class PracticeZone extends StatefulWidget {
-  final Subject subject;
-
-  const PracticeZone({super.key, required this.subject});
+  const PracticeZone({super.key});
 
   @override
   State<PracticeZone> createState() => _PracticeZoneState();
 }
 
 class _PracticeZoneState extends State<PracticeZone> {
-  Difficulty _selectedDifficulty = Difficulty.basic;
-  List<PracticeQuestion>? _questions;
+  Subject? _selectedSubject;
+  String _selectedDifficulty = 'Easy';
+  List<PracticeQuestion>? _currentQuestions;
   int _currentQuestionIndex = 0;
-  String? _selectedAnswer;
-  bool _showExplanation = false;
-  int _correctAnswers = 0;
+  Map<int, String> _userAnswers = {};
+  bool _showResults = false;
 
   void _startPractice() {
+    if (_selectedSubject == null) return;
+
     final profile = context.read<ProfileProvider>().profile;
     if (profile == null) return;
 
+    final questions = PracticeGenerator.generateQuestions(
+      _selectedSubject!,
+      profile.grade,
+      5,
+      difficulty: _selectedDifficulty,
+    );
+
     setState(() {
-      _questions = PracticeGenerator.generateQuestions(
-        subject: widget.subject,
-        grade: profile.grade,
-        difficulty: _selectedDifficulty,
-        count: 5,
-      );
+      _currentQuestions = questions;
       _currentQuestionIndex = 0;
-      _selectedAnswer = null;
-      _showExplanation = false;
-      _correctAnswers = 0;
+      _userAnswers.clear();
+      _showResults = false;
     });
   }
 
-  void _submitAnswer() {
-    if (_selectedAnswer == null || _questions == null) return;
-
-    final isCorrect = _selectedAnswer == _questions![_currentQuestionIndex].correctAnswer;
-    
-    if (isCorrect) {
-      _correctAnswers++;
-    }
-
+  void _submitAnswer(String answer) {
     setState(() {
-      _showExplanation = true;
+      _userAnswers[_currentQuestionIndex] = answer;
     });
   }
 
   void _nextQuestion() {
-    if (_questions == null) return;
-
-    if (_currentQuestionIndex < _questions!.length - 1) {
+    if (_currentQuestionIndex < _currentQuestions!.length - 1) {
       setState(() {
         _currentQuestionIndex++;
-        _selectedAnswer = null;
-        _showExplanation = false;
       });
     } else {
-      _showResults();
+      _finishPractice();
     }
   }
 
-  void _showResults() {
-    final profileProvider = context.read<ProfileProvider>();
-    profileProvider.incrementPracticeCompleted();
+  Future<void> _finishPractice() async {
+    await context.read<ProfileProvider>().incrementPracticeCompleted();
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text('🎉 Practice Complete!'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'You got $_correctAnswers out of ${_questions!.length} correct!',
-              style: Theme.of(context).textTheme.bodyLarge,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            LinearProgressIndicator(
-              value: _correctAnswers / _questions!.length,
-              minHeight: 8,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '${((_correctAnswers / _questions!.length) * 100).toStringAsFixed(0)}%',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              setState(() {
-                _questions = null;
-              });
-            },
-            child: const Text('Done'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _startPractice();
-            },
-            child: const Text('Practice Again'),
-          ),
-        ],
-      ),
-    );
+    setState(() {
+      _showResults = true;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_questions == null) {
-      return _buildDifficultySelection();
+    if (_currentQuestions == null) {
+      return _buildSetupView();
+    } else if (_showResults) {
+      return _buildResultsView();
+    } else {
+      return _buildQuestionView();
     }
-
-    return _buildQuestionView();
   }
 
-  Widget _buildDifficultySelection() {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+  Widget _buildSetupView() {
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      appBar: AppBar(
+        title: const Text('Practice'),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Choose subject and difficulty',
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+            const SizedBox(height: 32),
+
+            // Subject selection
+            Text(
+              'Subject',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 12),
+            _buildSubjectSelector(),
+
+            const SizedBox(height: 32),
+
+            // Difficulty selection
+            Text(
+              'Difficulty',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 12),
+            _buildDifficultySelector(),
+
+            const SizedBox(height: 48),
+
+            // Start button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _selectedSubject != null ? _startPractice : null,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                ),
+                child: const Text('Start Practice'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubjectSelector() {
+    return Column(
+      children: Subject.values.map((subject) {
+        final isSelected = _selectedSubject == subject;
+        IconData icon;
+
+        switch (subject) {
+          case Subject.mathematics:
+            icon = Icons.calculate;
+            break;
+          case Subject.science:
+            icon = Icons.science;
+            break;
+          case Subject.socialScience:
+            icon = Icons.public;
+            break;
+        }
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Material(
+            color: isSelected
+                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
+                : Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(12),
+            child: InkWell(
+              onTap: () {
+                setState(() {
+                  _selectedSubject = subject;
+                });
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isSelected
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).dividerColor,
+                    width: isSelected ? 2 : 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        icon,
+                        color: isSelected
+                            ? Colors.white
+                            : Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Text(
+                      subject.displayName,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            color: isSelected
+                                ? Theme.of(context).colorScheme.primary
+                                : null,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildDifficultySelector() {
+    return Row(
+      children: ['Easy', 'Medium', 'Hard'].map((difficulty) {
+        final isSelected = _selectedDifficulty == difficulty;
+        int dotCount =
+            difficulty == 'Easy' ? 1 : (difficulty == 'Medium' ? 2 : 3);
+
+        return Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: Material(
+              color: isSelected
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(12),
+              child: InkWell(
+                onTap: () {
+                  setState(() {
+                    _selectedDifficulty = difficulty;
+                  });
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isSelected
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).dividerColor,
+                      width: isSelected ? 0 : 1,
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(
+                          dotCount,
+                          (index) => Container(
+                            width: 6,
+                            height: 6,
+                            margin: const EdgeInsets.symmetric(horizontal: 2),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? Colors.white
+                                  : Theme.of(context).colorScheme.onSurface,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        difficulty,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: isSelected
+                              ? Colors.white
+                              : Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildQuestionView() {
+    final question = _currentQuestions![_currentQuestionIndex];
+    final hasAnswered = _userAnswers.containsKey(_currentQuestionIndex);
+
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () {
+            setState(() {
+              _currentQuestions = null;
+            });
+          },
+        ),
+        title: Text(
+          'Question ${_currentQuestionIndex + 1}/${_currentQuestions!.length}',
+        ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: Center(
+              child: Text(
+                _selectedSubject!.displayName,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+      body: Column(
         children: [
-          Text(
-            'Choose Difficulty',
-            style: Theme.of(context).textTheme.displaySmall,
+          // Progress bar
+          LinearProgressIndicator(
+            value: (_currentQuestionIndex + 1) / _currentQuestions!.length,
+            backgroundColor: Theme.of(context).dividerColor,
+            valueColor: AlwaysStoppedAnimation<Color>(
+              Theme.of(context).colorScheme.primary,
+            ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Practice ${widget.subject.displayName} questions',
-            style: Theme.of(context).textTheme.bodyLarge,
+
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Question
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).cardColor,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Theme.of(context).dividerColor,
+                      ),
+                    ),
+                    child: Text(
+                      question.question,
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Options
+                  ...question.options.map((option) {
+                    final isSelected =
+                        _userAnswers[_currentQuestionIndex] == option;
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Material(
+                        color: isSelected
+                            ? Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withValues(alpha: 0.1)
+                            : Theme.of(context).cardColor,
+                        borderRadius: BorderRadius.circular(12),
+                        child: InkWell(
+                          onTap:
+                              hasAnswered ? null : () => _submitAnswer(option),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isSelected
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Theme.of(context).dividerColor,
+                                width: isSelected ? 2 : 1,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? Theme.of(context)
+                                              .colorScheme
+                                              .primary
+                                          : Theme.of(context).dividerColor,
+                                      width: 2,
+                                    ),
+                                    color: isSelected
+                                        ? Theme.of(context).colorScheme.primary
+                                        : Colors.transparent,
+                                  ),
+                                  child: isSelected
+                                      ? const Icon(
+                                          Icons.check,
+                                          size: 16,
+                                          color: Colors.white,
+                                        )
+                                      : null,
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Text(
+                                    option,
+                                    style:
+                                        Theme.of(context).textTheme.bodyLarge,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
           ),
-          const SizedBox(height: 32),
-          _buildDifficultyCard(
-            difficulty: Difficulty.basic,
-            icon: Icons.star_outline,
-            title: 'Basic',
-            description: 'Foundation concepts and simple problems',
-          ),
-          const SizedBox(height: 16),
-          _buildDifficultyCard(
-            difficulty: Difficulty.intermediate,
-            icon: Icons.star_half,
-            title: 'Intermediate',
-            description: 'Moderate difficulty with mixed concepts',
-          ),
-          const SizedBox(height: 16),
-          _buildDifficultyCard(
-            difficulty: Difficulty.advanced,
-            icon: Icons.star,
-            title: 'Advanced',
-            description: 'Challenging problems requiring deep understanding',
-          ),
-          const Spacer(),
-          ElevatedButton(
-            onPressed: _startPractice,
-            child: const Text('Start Practice'),
-          ),
+
+          // Next button
+          if (hasAnswered)
+            Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _nextQuestion,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                      ),
+                      child: Text(
+                        _currentQuestionIndex == _currentQuestions!.length - 1
+                            ? 'Finish'
+                            : 'Next Question',
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildDifficultyCard({
-    required Difficulty difficulty,
-    required IconData icon,
-    required String title,
-    required String description,
-  }) {
-    final isSelected = _selectedDifficulty == difficulty;
+  Widget _buildResultsView() {
+    int correct = 0;
+    for (int i = 0; i < _currentQuestions!.length; i++) {
+      if (_userAnswers[i] == _currentQuestions![i].correctAnswer) {
+        correct++;
+      }
+    }
 
-    return Card(
-      color: isSelected
-          ? Theme.of(context).colorScheme.primary
-          : Theme.of(context).cardTheme.color,
-      child: InkWell(
-        onTap: () {
-          setState(() {
-            _selectedDifficulty = difficulty;
-          });
-        },
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Row(
-            children: [
-              Icon(
-                icon,
-                size: 40,
-                color: isSelected
-                    ? Theme.of(context).colorScheme.onPrimary
-                    : Theme.of(context).colorScheme.primary,
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: isSelected
-                                ? Theme.of(context).colorScheme.onPrimary
-                                : null,
-                          ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      description,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: isSelected
-                                ? Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.8)
-                                : null,
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-              if (isSelected)
-                Icon(
-                  Icons.check_circle,
-                  color: Theme.of(context).colorScheme.onPrimary,
-                ),
-            ],
-          ),
+    final percentage = (correct / _currentQuestions!.length * 100).round();
+    final isPassed = percentage >= 60;
+
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () {
+            setState(() {
+              _currentQuestions = null;
+            });
+          },
         ),
+        title: const Text('Results'),
       ),
-    );
-  }
-
-  Widget _buildQuestionView() {
-    final question = _questions![_currentQuestionIndex];
-    final isCorrect = _selectedAnswer == question.correctAnswer;
-
-    return Column(
-      children: [
-        // Progress bar
-        LinearProgressIndicator(
-          value: (_currentQuestionIndex + 1) / _questions!.length,
-          minHeight: 6,
-        ),
-
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Question number and difficulty
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Question ${_currentQuestionIndex + 1}/${_questions!.length}',
-                      style: Theme.of(context).textTheme.titleMedium,
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            // Result card
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      color: (isPassed
+                              ? Colors.green
+                              : Theme.of(context).colorScheme.error)
+                          .withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
                     ),
-                    Chip(
-                      label: Text(_selectedDifficulty.displayName),
-                      avatar: Icon(
-                        _selectedDifficulty == Difficulty.basic
-                            ? Icons.star_outline
-                            : _selectedDifficulty == Difficulty.intermediate
-                                ? Icons.star_half
-                                : Icons.star,
-                        size: 18,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-
-                // Question
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Text(
-                      question.question,
-                      style: Theme.of(context).textTheme.headlineMedium,
+                    child: Icon(
+                      isPassed ? Icons.celebration : Icons.refresh,
+                      size: 60,
+                      color: isPassed
+                          ? Colors.green
+                          : Theme.of(context).colorScheme.error,
                     ),
                   ),
-                ),
-                const SizedBox(height: 24),
-
-                // Options
-                ...question.options.map((option) {
-                  final isSelected = _selectedAnswer == option;
-                  final showCorrect = _showExplanation && option == question.correctAnswer;
-                  final showWrong = _showExplanation && isSelected && !isCorrect;
-
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Material(
-                      color: showCorrect
-                          ? Colors.green.withValues(alpha: 0.1)
-                          : showWrong
-                              ? Colors.red.withValues(alpha: 0.1)
-                              : isSelected
-                                  ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
-                                  : Theme.of(context).cardColor,
-                      borderRadius: BorderRadius.circular(12),
-                      child: InkWell(
-                        onTap: _showExplanation
-                            ? null
-                            : () {
-                                setState(() {
-                                  _selectedAnswer = option;
-                                });
-                              },
-                        borderRadius: BorderRadius.circular(12),
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              color: showCorrect
-                                  ? Colors.green
-                                  : showWrong
-                                      ? Colors.red
-                                      : isSelected
-                                          ? Theme.of(context).colorScheme.primary
-                                          : Theme.of(context).dividerColor,
-                              width: 2,
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  option,
-                                  style: Theme.of(context).textTheme.bodyLarge,
-                                ),
-                              ),
-                              if (showCorrect)
-                                const Icon(Icons.check_circle, color: Colors.green),
-                              if (showWrong)
-                                const Icon(Icons.cancel, color: Colors.red),
-                            ],
-                          ),
+                  const SizedBox(height: 24),
+                  Text(
+                    isPassed ? 'Great Job!' : 'Keep Practicing!',
+                    style: Theme.of(context).textTheme.displaySmall,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'You scored',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '$percentage%',
+                    style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                          color: isPassed
+                              ? Colors.green
+                              : Theme.of(context).colorScheme.error,
+                          fontWeight: FontWeight.w800,
                         ),
-                      ),
-                    ),
-                  );
-                }),
-
-                // Hint
-                if (!_showExplanation && question.hint != null)
-                  Card(
-                    color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.1),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.lightbulb_outline,
-                            color: Theme.of(context).colorScheme.tertiary,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              question.hint!,
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                   ),
-
-                // Explanation
-                if (_showExplanation) ...[
-                  const SizedBox(height: 16),
-                  Card(
-                    color: isCorrect
-                        ? Colors.green.withValues(alpha: 0.1)
-                        : Colors.orange.withValues(alpha: 0.1),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                isCorrect ? Icons.check_circle : Icons.info_outline,
-                                color: isCorrect ? Colors.green : Colors.orange,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                isCorrect ? 'Correct!' : 'Not quite right',
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                      color: isCorrect ? Colors.green : Colors.orange,
-                                    ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            question.explanation,
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                        ],
-                      ),
-                    ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '$correct out of ${_currentQuestions!.length} correct',
+                    style: Theme.of(context).textTheme.bodyLarge,
                   ),
                 ],
-              ],
+              ),
             ),
-          ),
-        ),
 
-        // Action buttons
-        Padding(
-          padding: const EdgeInsets.all(24),
-          child: SafeArea(
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {
-                      setState(() {
-                        _questions = null;
-                      });
-                    },
-                    child: const Text('Exit'),
-                  ),
+            const SizedBox(height: 32),
+
+            // Action buttons
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _startPractice,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 18),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  flex: 2,
-                  child: ElevatedButton(
-                    onPressed: _selectedAnswer == null
-                        ? null
-                        : _showExplanation
-                            ? _nextQuestion
-                            : _submitAnswer,
-                    child: Text(_showExplanation ? 'Next Question' : 'Submit Answer'),
-                  ),
-                ),
-              ],
+                child: const Text('Practice Again'),
+              ),
             ),
-          ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () {
+                  setState(() {
+                    _currentQuestions = null;
+                  });
+                },
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                ),
+                child: const Text('Choose Different Subject'),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

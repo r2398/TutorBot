@@ -1,10 +1,8 @@
-// Stats & progress
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-// import 'package:intl/intl.dart';
 import '../models/learning_profile.dart';
 import '../providers/profile_provider.dart';
+import '../providers/theme_provider.dart';
 
 class ProgressDashboard extends StatelessWidget {
   const ProgressDashboard({super.key});
@@ -12,399 +10,481 @@ class ProgressDashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final profile = context.watch<ProfileProvider>().profile;
+    final themeProvider = context.watch<ThemeProvider>();
 
     if (profile == null) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Streak card
-          _buildStreakCard(context, profile),
-          const SizedBox(height: 24),
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: CustomScrollView(
+        slivers: [
+          // Profile header
+          SliverToBoxAdapter(
+            child: Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                border: Border(
+                  bottom: BorderSide(
+                    color: Theme.of(context).dividerColor,
+                  ),
+                ),
+              ),
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      // Avatar
+                      Container(
+                        width: 100,
+                        height: 100,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text(
+                            profile.studentName[0].toUpperCase(),
+                            style: const TextStyle(
+                              fontSize: 40,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        profile.studentName,
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Grade ${profile.grade.number}',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
 
           // Stats grid
-          Text(
-            'Your Stats',
-            style: Theme.of(context).textTheme.headlineMedium,
+          SliverPadding(
+            padding: const EdgeInsets.all(24),
+            sliver: SliverGrid(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 1.5,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+              ),
+              delegate: SliverChildListDelegate([
+                _buildStatCard(
+                  context,
+                  icon: Icons.local_fire_department,
+                  value: '${profile.streakDays}',
+                  label: 'Day Streak',
+                  color: Colors.orange,
+                ),
+                _buildStatCard(
+                  context,
+                  icon: Icons.question_answer,
+                  value: '${profile.questionsAsked}',
+                  label: 'Questions',
+                  color: Colors.blue,
+                ),
+                _buildStatCard(
+                  context,
+                  icon: Icons.fitness_center,
+                  value: '${profile.practiceCompleted}',
+                  label: 'Practice',
+                  color: Colors.green,
+                ),
+                _buildStatCard(
+                  context,
+                  icon: Icons.emoji_events,
+                  value: '${profile.badges.length}',
+                  label: 'Badges',
+                  color: Colors.amber,
+                ),
+              ]),
+            ),
           ),
-          const SizedBox(height: 16),
-          _buildStatsGrid(context, profile),
-          const SizedBox(height: 24),
 
-          // Subject mastery
-          Text(
-            'Subject Mastery',
-            style: Theme.of(context).textTheme.headlineMedium,
+          // Settings section
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+              child: Text(
+                'Settings',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+            ),
           ),
-          const SizedBox(height: 16),
-          _buildSubjectMastery(context, profile),
-          const SizedBox(height: 24),
 
-          // Strengths and improvements
-          Text(
-            'Performance Insights',
-            style: Theme.of(context).textTheme.headlineMedium,
-          ),
-          const SizedBox(height: 16),
-          _buildInsights(context, profile),
-          const SizedBox(height: 24),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                children: [
+                  // Dark mode toggle
+                  _buildSettingItem(
+                    context,
+                    icon: Icons.dark_mode,
+                    title: 'Dark Mode',
+                    subtitle: 'Appearance',
+                    trailing: Switch(
+                      value: themeProvider.isDarkMode,
+                      onChanged: (value) {
+                        themeProvider.toggleTheme();
+                      },
+                      activeTrackColor: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
 
-          // Recent activity
-          Text(
-            'Recent Activity',
-            style: Theme.of(context).textTheme.headlineMedium,
+                  const SizedBox(height: 12),
+
+                  // Language
+                  _buildSettingItem(
+                    context,
+                    icon: Icons.language,
+                    title: 'Language',
+                    subtitle: profile.preferredLanguage.displayName,
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                    onTap: () {
+                      _showLanguageDialog(context);
+                    },
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // Switch profile
+                  _buildSettingItem(
+                    context,
+                    icon: Icons.swap_horiz,
+                    title: 'Switch Profile',
+                    subtitle: 'Change to a different account',
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                    onTap: () {
+                      _showSwitchProfileDialog(context);
+                    },
+                  ),
+                ],
+              ),
+            ),
           ),
-          const SizedBox(height: 16),
-          _buildRecentActivity(context, profile),
+
+          // Concept mastery section
+          if (profile.conceptMastery.isNotEmpty) ...[
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
+                child: Text(
+                  'Concept Mastery',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final concept = profile.conceptMastery[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _buildConceptCard(context, concept),
+                    );
+                  },
+                  childCount: profile.conceptMastery.length,
+                ),
+              ),
+            ),
+          ],
+
+          const SliverToBoxAdapter(
+            child: SizedBox(height: 24),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildStreakCard(BuildContext context, LearningProfile profile) {
-    return Card(
-      color: Theme.of(context).colorScheme.tertiary,
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.local_fire_department,
-                size: 40,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(width: 20),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${profile.streakDays} Day Streak!',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          color: Colors.white,
-                        ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Keep it up! Learn every day to maintain your streak.',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.white.withValues(alpha: 0.9),
-                        ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+  Widget _buildStatCard(
+    BuildContext context, {
+    required IconData icon,
+    required String value,
+    required String label,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Theme.of(context).dividerColor,
         ),
       ),
-    );
-  }
-
-  Widget _buildStatsGrid(BuildContext context, LearningProfile profile) {
-    final stats = [
-      {
-        'icon': Icons.timer_outlined,
-        'title': 'Study Time',
-        'value': '${profile.totalStudyTime} min',
-        'color': Colors.blue,
-      },
-      {
-        'icon': Icons.quiz_outlined,
-        'title': 'Questions Asked',
-        'value': '${profile.questionsAsked}',
-        'color': Colors.green,
-      },
-      {
-        'icon': Icons.psychology_outlined,
-        'title': 'Practice Done',
-        'value': '${profile.practiceCompleted}',
-        'color': Colors.orange,
-      },
-      {
-        'icon': Icons.emoji_events_outlined,
-        'title': 'Badges Earned',
-        'value': '${profile.badges.length}',
-        'color': Colors.purple,
-      },
-    ];
-
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-        childAspectRatio: 1.5,
-      ),
-      itemCount: stats.length,
-      itemBuilder: (context, index) {
-        final stat = stats[index];
-        return Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  stat['icon'] as IconData,
-                  size: 32,
-                  color: stat['color'] as Color,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  stat['value'] as String,
-                  style: Theme.of(context).textTheme.headlineMedium,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  stat['title'] as String,
-                  style: Theme.of(context).textTheme.bodySmall,
-                  textAlign: TextAlign.center,
-                ),
-              ],
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              icon,
+              color: color,
+              size: 24,
             ),
           ),
-        );
-      },
+          const Spacer(),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildSubjectMastery(BuildContext context, LearningProfile profile) {
-    // Calculate mastery per subject
-    final subjectMastery = <Subject, double>{};
-    
-    for (var subject in Subject.values) {
-      final concepts = profile.conceptMastery
-          .where((c) => c.subject == subject)
-          .toList();
-      
-      if (concepts.isNotEmpty) {
-        final avgMastery = concepts
-            .map((c) => c.masteryLevel)
-            .reduce((a, b) => a + b) / concepts.length;
-        subjectMastery[subject] = avgMastery;
-      } else {
-        subjectMastery[subject] = 0;
-      }
-    }
-
-    return Column(
-      children: Subject.values.map((subject) {
-        final mastery = subjectMastery[subject] ?? 0;
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(_getSubjectIcon(subject)),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          subject.displayName,
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                      ),
-                      Text(
-                        '${mastery.toStringAsFixed(0)}%',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: mastery / 100,
-                      minHeight: 8,
-                      backgroundColor: Theme.of(context).colorScheme.secondary,
+  Widget _buildSettingItem(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    Widget? trailing,
+    VoidCallback? onTap,
+  }) {
+    return Material(
+      color: Theme.of(context).cardColor,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Theme.of(context).dividerColor,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  icon,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildInsights(BuildContext context, LearningProfile profile) {
-    return Column(
-      children: [
-        if (profile.strengths.isNotEmpty)
-          Card(
-            color: Colors.green.withValues(alpha: 0.1),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.trending_up, color: Colors.green),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Strengths',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: Colors.green,
-                            ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: profile.strengths.map((strength) {
-                      return Chip(
-                        label: Text(strength),
-                        backgroundColor: Colors.green.withValues(alpha: 0.2),
-                        side: BorderSide.none,
-                      );
-                    }).toList(),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        const SizedBox(height: 16),
-        if (profile.areasForImprovement.isNotEmpty)
-          Card(
-            color: Colors.orange.withValues(alpha: 0.1),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.flag_outlined, color: Colors.orange),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Areas for Improvement',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: Colors.orange,
-                            ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: profile.areasForImprovement.map((area) {
-                      return Chip(
-                        label: Text(area),
-                        backgroundColor: Colors.orange.withValues(alpha: 0.2),
-                        side: BorderSide.none,
-                      );
-                    }).toList(),
-                  ),
-                ],
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildRecentActivity(BuildContext context, LearningProfile profile) {
-    final recentConcepts = profile.conceptMastery
-        .toList()
-      ..sort((a, b) => b.lastPracticed.compareTo(a.lastPracticed));
-
-    final displayConcepts = recentConcepts.take(5).toList();
-
-    if (displayConcepts.isEmpty) {
-      return Card(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Center(
-            child: Text(
-              'No recent activity yet. Start practicing to see your progress!',
-              style: Theme.of(context).textTheme.bodyMedium,
-              textAlign: TextAlign.center,
-            ),
+              if (trailing != null) trailing,
+            ],
           ),
         ),
-      );
-    }
-
-    return Column(
-      children: displayConcepts.map((concept) {
-        final timeAgo = _getTimeAgo(concept.lastPracticed);
-        return Card(
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundColor: _getMasteryColor(concept.masteryLevel).withValues(alpha: 0.2),
-              child: Icon(
-                _getSubjectIcon(concept.subject),
-                color: _getMasteryColor(concept.masteryLevel),
-              ),
-            ),
-            title: Text(concept.conceptName),
-            subtitle: Text('$timeAgo • ${concept.masteryLevel.toStringAsFixed(0)}% mastery'),
-            trailing: Icon(
-              concept.masteryLevel >= 80
-                  ? Icons.check_circle
-                  : concept.masteryLevel >= 50
-                      ? Icons.trending_up
-                      : Icons.trending_flat,
-              color: _getMasteryColor(concept.masteryLevel),
-            ),
-          ),
-        );
-      }).toList(),
+      ),
     );
   }
 
-  IconData _getSubjectIcon(Subject subject) {
-    switch (subject) {
-      case Subject.mathematics:
-        return Icons.calculate;
-      case Subject.science:
-        return Icons.science;
-      case Subject.socialScience:
-        return Icons.public;
-    }
+  Widget _buildConceptCard(BuildContext context, ConceptMastery concept) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context).dividerColor,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  concept.conceptName,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              Text(
+                '${(concept.masteryLevel * 100).toInt()}%',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: concept.masteryLevel,
+              backgroundColor: Theme.of(context).dividerColor,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                Theme.of(context).colorScheme.primary,
+              ),
+              minHeight: 8,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Last practiced: ${_formatDate(concept.lastPracticed)}',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ),
+    );
   }
 
-  Color _getMasteryColor(double mastery) {
-    if (mastery >= 80) return Colors.green;
-    if (mastery >= 50) return Colors.orange;
-    return Colors.red;
-  }
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
 
-  String _getTimeAgo(DateTime dateTime) {
-    final difference = DateTime.now().difference(dateTime);
-    
-    if (difference.inDays > 0) {
-      return '${difference.inDays}d ago';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours}h ago';
-    } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}m ago';
+    if (difference.inDays == 0) {
+      return 'Today';
+    } else if (difference.inDays == 1) {
+      return 'Yesterday';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} days ago';
     } else {
-      return 'Just now';
+      return '${date.day}/${date.month}/${date.year}';
     }
+  }
+
+  void _showLanguageDialog(BuildContext context) {
+    final profile = context.read<ProfileProvider>().profile;
+    if (profile == null) return;
+
+    Language? selectedLanguage = profile.preferredLanguage;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: const Text('Choose Language'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: Language.values.map((language) {
+                  return ListTile(
+                    title: Text(language.displayName),
+                    leading: Radio<Language>(
+                      value: language,
+                      groupValue: selectedLanguage,
+                      onChanged: (value) {
+                        setState(() {
+                          selectedLanguage = value;
+                        });
+                      },
+                    ),
+                    onTap: () {
+                      setState(() {
+                        selectedLanguage = language;
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  if (selectedLanguage != null) {
+                    final updatedProfile = LearningProfile(
+                      studentName: profile.studentName,
+                      grade: profile.grade,
+                      preferredLanguage: selectedLanguage!,
+                      preferredSubject: profile.preferredSubject,
+                      streakDays: profile.streakDays,
+                      totalStudyTime: profile.totalStudyTime,
+                      questionsAsked: profile.questionsAsked,
+                      practiceCompleted: profile.practiceCompleted,
+                      badges: profile.badges,
+                      goals: profile.goals,
+                      conceptMastery: profile.conceptMastery,
+                      strengths: profile.strengths,
+                      areasForImprovement: profile.areasForImprovement,
+                      lastActive: profile.lastActive,
+                    );
+                    dialogContext
+                        .read<ProfileProvider>()
+                        .updateProfile(updatedProfile);
+                    Navigator.pop(context);
+                  }
+                },
+                child: const Text('Save'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _showSwitchProfileDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Switch Profile'),
+        content: const Text(
+          'This feature will allow you to switch between different student profiles. Coming soon!',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 }
