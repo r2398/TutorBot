@@ -283,7 +283,7 @@ class _TutoringViewState extends State<TutoringView> {
           ),
           const SizedBox(height: 8),
           Text(
-            'I\'m Anna, your AI tutor. Ask me anything about ${widget.subject.displayName}!',
+            'I\'m Tutor Anna, your AI tutor. Ask me anything about ${widget.subject.displayName}!',
             style: Theme.of(context).textTheme.bodyLarge,
           ),
           const SizedBox(height: 32),

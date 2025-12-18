@@ -1,5 +1,6 @@
-// Voice input button
+// Voice input widget
 
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
@@ -29,14 +30,49 @@ class _VoiceInterfaceState extends State<VoiceInterface> {
   }
 
   Future<void> _initSpeech() async {
-    _isAvailable = await _speech.initialize(
-      onError: (error) => print('Speech error: $error'),
-      onStatus: (status) => print('Speech status: $status'),
-    );
-    setState(() {});
+    if (kIsWeb) {
+      // Speech recognition has limited support on web
+      setState(() => _isAvailable = false);
+      return;
+    }
+    
+    try {
+      _isAvailable = await _speech.initialize(
+        onError: (error) {
+          debugPrint('Speech error: $error');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Speech error: $error')),
+            );
+          }
+        },
+        onStatus: (status) => debugPrint('Speech status: $status'),
+      );
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      debugPrint('Speech initialization error: $e');
+      if (mounted) {
+        setState(() {
+          _isAvailable = false;
+        });
+      }
+    }
   }
 
   Future<void> _listen() async {
+    if (kIsWeb) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Voice input is not supported on web browsers yet'),
+          ),
+        );
+      }
+      return;
+    }
+
     if (!_isListening && _isAvailable) {
       setState(() => _isListening = true);
       await _speech.listen(
@@ -64,18 +100,25 @@ class _VoiceInterfaceState extends State<VoiceInterface> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: _isAvailable ? _listen : null,
-      onLongPress: _isAvailable ? _listen : null,
-      child: CircleAvatar(
-        backgroundColor: _isListening
-            ? Theme.of(context).colorScheme.error
-            : Theme.of(context).colorScheme.secondary,
-        child: Icon(
-          _isListening ? Icons.mic : Icons.mic_none,
-          color: _isListening
-              ? Colors.white
-              : Theme.of(context).colorScheme.onSecondary,
+    return Tooltip(
+      message: kIsWeb ? 'Voice input not available on web' : 'Tap to speak',
+      child: GestureDetector(
+        onTap: _isAvailable ? _listen : null,
+        onLongPress: _isAvailable ? _listen : null,
+        child: CircleAvatar(
+          backgroundColor: _isListening
+              ? Theme.of(context).colorScheme.error
+              : (_isAvailable 
+                  ? Theme.of(context).colorScheme.secondary
+                  : Colors.grey),
+          child: Icon(
+            _isListening ? Icons.mic : Icons.mic_none,
+            color: _isListening
+                ? Colors.white
+                : (_isAvailable 
+                    ? Theme.of(context).colorScheme.onSecondary
+                    : Colors.white),
+          ),
         ),
       ),
     );
