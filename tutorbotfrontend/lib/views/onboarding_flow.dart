@@ -118,7 +118,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           ),
           const SizedBox(height: 32),
           Text(
-            'Welcome to TutorAnna!',
+            'I\'m Tutor Anna!',
             style: Theme.of(context).textTheme.displaySmall,
             textAlign: TextAlign.center,
           ),
@@ -154,7 +154,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'TutorAnna helps you learn at your own pace with personalized guidance',
+                    'Tutor Anna helps you learn at your own pace with personalized guidance',
                     style: Theme.of(context).textTheme.bodyMedium,
                     textAlign: TextAlign.center,
                   ),

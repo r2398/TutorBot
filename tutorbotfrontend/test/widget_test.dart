@@ -21,7 +21,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify that the onboarding screen loads (since no profile exists)
-    expect(find.text('Welcome to TutorAnna!'), findsOneWidget);
+    expect(find.text('I\'m Tutor Anna!'), findsOneWidget);
   });
 
   testWidgets('Onboarding flow navigation works', (WidgetTester tester) async {
@@ -32,7 +32,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify progress indicators exist (4 steps)
-    expect(find.text('Welcome to TutorAnna!'), findsOneWidget);
+    expect(find.text('I\'m Tutor Anna!'), findsOneWidget);
     
     // Verify Continue button is disabled initially
     final continueButton = find.widgetWithText(ElevatedButton, 'Continue');

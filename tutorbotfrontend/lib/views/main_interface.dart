@@ -166,7 +166,7 @@ class _MainInterfaceState extends State<MainInterface> {
   String _getTitle() {
     switch (_currentIndex) {
       case 0:
-        return 'AI Tutor';
+        return 'Tutor Anna';
       case 1:
         return 'Practice Zone';
       case 2:
@@ -176,7 +176,7 @@ class _MainInterfaceState extends State<MainInterface> {
       case 4:
         return 'Study Plan';
       default:
-        return 'TutorAnna';
+        return 'Tutor Anna';
     }
   }
 
