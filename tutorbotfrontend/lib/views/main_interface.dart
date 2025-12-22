@@ -16,7 +16,7 @@ class MainInterface extends StatefulWidget {
 
 class _MainInterfaceState extends State<MainInterface> {
   int _selectedIndex = 0;
-  Subject _currentSubject = Subject.mathematics;
+  final Subject _currentSubject = Subject.mathematics;
 
   @override
   Widget build(BuildContext context) {
@@ -55,40 +55,43 @@ class _MainInterfaceState extends State<MainInterface> {
         ],
       ),
       child: SafeArea(
-        child: SizedBox(
-          height: 72,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavItem(
-                context: context,
-                index: 0,
-                icon: Icons.chat_bubble_outline,
-                activeIcon: Icons.chat_bubble,
-                label: 'Chat',
-              ),
-              _buildNavItem(
-                context: context,
-                index: 1,
-                icon: Icons.school_outlined,
-                activeIcon: Icons.school,
-                label: 'Practice',
-              ),
-              _buildNavItem(
-                context: context,
-                index: 2,
-                icon: Icons.emoji_events_outlined,
-                activeIcon: Icons.emoji_events,
-                label: 'Rewards',
-              ),
-              _buildNavItem(
-                context: context,
-                index: 3,
-                icon: Icons.person_outline,
-                activeIcon: Icons.person,
-                label: 'Profile',
-              ),
-            ],
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: SizedBox(
+            height: 60,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildNavItem(
+                  context: context,
+                  index: 0,
+                  icon: Icons.chat_bubble_outline,
+                  activeIcon: Icons.chat_bubble,
+                  label: 'Chat',
+                ),
+                _buildNavItem(
+                  context: context,
+                  index: 1,
+                  icon: Icons.school_outlined,
+                  activeIcon: Icons.school,
+                  label: 'Practice',
+                ),
+                _buildNavItem(
+                  context: context,
+                  index: 2,
+                  icon: Icons.emoji_events_outlined,
+                  activeIcon: Icons.emoji_events,
+                  label: 'Rewards',
+                ),
+                _buildNavItem(
+                  context: context,
+                  index: 3,
+                  icon: Icons.person_outline,
+                  activeIcon: Icons.person,
+                  label: 'Profile',
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -113,9 +116,10 @@ class _MainInterfaceState extends State<MainInterface> {
               _selectedIndex = index;
             });
           },
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
@@ -123,13 +127,13 @@ class _MainInterfaceState extends State<MainInterface> {
                   color: isSelected
                       ? Theme.of(context).colorScheme.primary
                       : Theme.of(context).textTheme.bodyMedium?.color,
-                  size: 26,
+                  size: 24,
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
                   label,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                     color: isSelected
                         ? Theme.of(context).colorScheme.primary

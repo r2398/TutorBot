@@ -39,21 +39,21 @@ class ProgressDashboard extends StatelessWidget {
                     children: [
                       // Avatar
                       Container(
-                        width: 100,
-                        height: 100,
+                        width: 80,
+                        height: 80,
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary,
+                          gradient: LinearGradient(
+                            colors: [
+                              Theme.of(context).colorScheme.primary,
+                              Theme.of(context).colorScheme.secondary,
+                            ],
+                          ),
                           shape: BoxShape.circle,
                         ),
-                        child: Center(
-                          child: Text(
-                            profile.studentName[0].toUpperCase(),
-                            style: const TextStyle(
-                              fontSize: 40,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            ),
-                          ),
+                        child: const Icon(
+                          Icons.person,
+                          size: 40,
+                          color: Colors.white,
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -63,7 +63,7 @@ class ProgressDashboard extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Grade ${profile.grade.number}',
+                        'Grade ${profile.grade.number} • ${profile.preferredSubject.displayName}',
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                     ],
@@ -79,34 +79,34 @@ class ProgressDashboard extends StatelessWidget {
             sliver: SliverGrid(
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
-                childAspectRatio: 1.5,
+                childAspectRatio: 1.3,
                 crossAxisSpacing: 16,
                 mainAxisSpacing: 16,
               ),
               delegate: SliverChildListDelegate([
                 _buildStatCard(
-                  context,
+                  context: context,
                   icon: Icons.local_fire_department,
                   value: '${profile.streakDays}',
                   label: 'Day Streak',
                   color: Colors.orange,
                 ),
                 _buildStatCard(
-                  context,
+                  context: context,
                   icon: Icons.question_answer,
                   value: '${profile.questionsAsked}',
                   label: 'Questions',
                   color: Colors.blue,
                 ),
                 _buildStatCard(
-                  context,
+                  context: context,
                   icon: Icons.fitness_center,
                   value: '${profile.practiceCompleted}',
                   label: 'Practice',
                   color: Colors.green,
                 ),
                 _buildStatCard(
-                  context,
+                  context: context,
                   icon: Icons.emoji_events,
                   value: '${profile.badges.length}',
                   label: 'Badges',
@@ -215,15 +215,15 @@ class ProgressDashboard extends StatelessWidget {
     );
   }
 
-  Widget _buildStatCard(
-    BuildContext context, {
+  Widget _buildStatCard({
+    required BuildContext context,
     required IconData icon,
     required String value,
     required String label,
     required Color color,
   }) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
@@ -232,33 +232,37 @@ class ProgressDashboard extends StatelessWidget {
         ),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 40,
-            height: 40,
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(
-              icon,
-              color: color,
-              size: 24,
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(height: 8),
+          Flexible(
+            child: Text(
+              value,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-          const Spacer(),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodyMedium,
+          const SizedBox(height: 2),
+          Flexible(
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
       ),
@@ -411,16 +415,16 @@ class ProgressDashboard extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: Language.values.map((language) {
+                  final isSelected = selectedLanguage == language;
                   return ListTile(
                     title: Text(language.displayName),
-                    leading: Radio<Language>(
-                      value: language,
-                      groupValue: selectedLanguage,
-                      onChanged: (value) {
-                        setState(() {
-                          selectedLanguage = value;
-                        });
-                      },
+                    leading: Icon(
+                      isSelected
+                          ? Icons.radio_button_checked
+                          : Icons.radio_button_unchecked,
+                      color: isSelected
+                          ? Theme.of(context).colorScheme.primary
+                          : null,
                     ),
                     onTap: () {
                       setState(() {
@@ -439,21 +443,8 @@ class ProgressDashboard extends StatelessWidget {
               TextButton(
                 onPressed: () {
                   if (selectedLanguage != null) {
-                    final updatedProfile = LearningProfile(
-                      studentName: profile.studentName,
-                      grade: profile.grade,
-                      preferredLanguage: selectedLanguage!,
-                      preferredSubject: profile.preferredSubject,
-                      streakDays: profile.streakDays,
-                      totalStudyTime: profile.totalStudyTime,
-                      questionsAsked: profile.questionsAsked,
-                      practiceCompleted: profile.practiceCompleted,
-                      badges: profile.badges,
-                      goals: profile.goals,
-                      conceptMastery: profile.conceptMastery,
-                      strengths: profile.strengths,
-                      areasForImprovement: profile.areasForImprovement,
-                      lastActive: profile.lastActive,
+                    final updatedProfile = profile.copyWith(
+                      preferredLanguage: selectedLanguage,
                     );
                     dialogContext
                         .read<ProfileProvider>()

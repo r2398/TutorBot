@@ -21,6 +21,24 @@ class MessageProvider extends ChangeNotifier {
     await _saveMessages(subject);
   }
 
+  Future<void> removeMessage(Subject subject, String messageId) async {
+    _messagesBySubject[subject]?.removeWhere((msg) => msg.id == messageId);
+    notifyListeners();
+    await _saveMessages(subject);
+  }
+
+  Future<void> updateMessage(Subject subject, Message updatedMessage) async {
+    final messages = _messagesBySubject[subject];
+    if (messages != null) {
+      final index = messages.indexWhere((msg) => msg.id == updatedMessage.id);
+      if (index != -1) {
+        messages[index] = updatedMessage;
+        notifyListeners();
+        await _saveMessages(subject);
+      }
+    }
+  }
+
   Future<void> clearMessages(Subject subject) async {
     _messagesBySubject[subject]?.clear();
     notifyListeners();
