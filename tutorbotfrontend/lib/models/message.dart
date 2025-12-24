@@ -84,11 +84,18 @@ class Message {
 
   factory Message.fromJson(Map<String, dynamic> json) => Message(
         id: json['id'],
-        role: MessageRole.values.firstWhere((e) => e.name == json['role']),
+        role: MessageRole.values.firstWhere(
+          (e) => e.name == json['role'],
+          orElse: () => MessageRole.tutor, // Fallback to a default value
+        ),
         content: json['content'],
         timestamp: DateTime.parse(json['timestamp']),
         subject: json['subject'] != null
-            ? Subject.values.firstWhere((e) => e.name == json['subject'])
+            ? Subject.values.firstWhere(
+                (e) => e.name == json['subject'],
+                orElse: () =>
+                    Subject.mathematics, // Fallback to a default value
+              )
             : null,
         imageUrl: json['imageUrl'],
         hints: json['hints'] != null ? List<String>.from(json['hints']) : null,

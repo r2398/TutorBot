@@ -42,20 +42,8 @@ class ProfileProvider extends ChangeNotifier {
 
   Future<void> incrementQuestionsAsked() async {
     if (_profile != null) {
-      final updated = LearningProfile(
-        studentName: _profile!.studentName,
-        grade: _profile!.grade,
-        preferredLanguage: _profile!.preferredLanguage,
-        preferredSubject: _profile!.preferredSubject,
-        streakDays: _profile!.streakDays,
-        totalStudyTime: _profile!.totalStudyTime,
+      final updated = _profile!.copyWith(
         questionsAsked: _profile!.questionsAsked + 1,
-        practiceCompleted: _profile!.practiceCompleted,
-        badges: _profile!.badges,
-        goals: _profile!.goals,
-        conceptMastery: _profile!.conceptMastery,
-        strengths: _profile!.strengths,
-        areasForImprovement: _profile!.areasForImprovement,
         lastActive: DateTime.now(),
       );
       await saveProfile(updated);
@@ -64,23 +52,9 @@ class ProfileProvider extends ChangeNotifier {
 
   Future<void> incrementPracticeCompleted() async {
     if (_profile != null) {
-      final updated = LearningProfile(
-        studentName: _profile!.studentName,
-        grade: _profile!.grade,
-        preferredLanguage: _profile!.preferredLanguage,
-        preferredSubject: _profile!.preferredSubject,
-        streakDays: _profile!.streakDays,
-        totalStudyTime: _profile!.totalStudyTime,
-        questionsAsked: _profile!.questionsAsked,
+      final updated = _profile!.copyWith(
         practiceCompleted: _profile!.practiceCompleted + 1,
-        practiceQuestionsCompleted:
-            _profile!.practiceQuestionsCompleted + 5,
-        badges: _profile!.badges,
-        goals: _profile!.goals,
-        learningGoals: _profile!.learningGoals,
-        conceptMastery: _profile!.conceptMastery,
-        strengths: _profile!.strengths,
-        areasForImprovement: _profile!.areasForImprovement,
+        practiceQuestionsCompleted: _profile!.practiceQuestionsCompleted + 5,
         lastActive: DateTime.now(),
       );
       await saveProfile(updated);
@@ -91,25 +65,7 @@ class ProfileProvider extends ChangeNotifier {
     if (_profile != null) {
       final updatedGoals = List<LearningGoal>.from(_profile!.learningGoals)
         ..add(goal);
-
-      final updated = LearningProfile(
-        studentName: _profile!.studentName,
-        grade: _profile!.grade,
-        preferredLanguage: _profile!.preferredLanguage,
-        preferredSubject: _profile!.preferredSubject,
-        streakDays: _profile!.streakDays,
-        totalStudyTime: _profile!.totalStudyTime,
-        questionsAsked: _profile!.questionsAsked,
-        practiceCompleted: _profile!.practiceCompleted,
-        practiceQuestionsCompleted: _profile!.practiceQuestionsCompleted,
-        badges: _profile!.badges,
-        goals: _profile!.goals,
-        learningGoals: updatedGoals,
-        conceptMastery: _profile!.conceptMastery,
-        strengths: _profile!.strengths,
-        areasForImprovement: _profile!.areasForImprovement,
-        lastActive: DateTime.now(),
-      );
+      final updated = _profile!.copyWith(learningGoals: updatedGoals);
       await saveProfile(updated);
     }
   }
@@ -118,11 +74,7 @@ class ProfileProvider extends ChangeNotifier {
     if (_profile != null) {
       final updatedGoals = _profile!.learningGoals.map((goal) {
         if (goal.id == goalId) {
-          return LearningGoal(
-            id: goal.id,
-            title: goal.title,
-            targetDate: goal.targetDate,
-            subject: goal.subject,
+          return goal.copyWith(
             progress: progress,
             completed: progress >= 100,
           );
@@ -130,30 +82,15 @@ class ProfileProvider extends ChangeNotifier {
         return goal;
       }).toList();
 
-      final updated = LearningProfile(
-        studentName: _profile!.studentName,
-        grade: _profile!.grade,
-        preferredLanguage: _profile!.preferredLanguage,
-        preferredSubject: _profile!.preferredSubject,
-        streakDays: _profile!.streakDays,
-        totalStudyTime: _profile!.totalStudyTime,
-        questionsAsked: _profile!.questionsAsked,
-        practiceCompleted: _profile!.practiceCompleted,
-        practiceQuestionsCompleted: _profile!.practiceQuestionsCompleted,
-        badges: _profile!.badges,
-        goals: _profile!.goals,
-        learningGoals: updatedGoals,
-        conceptMastery: _profile!.conceptMastery,
-        strengths: _profile!.strengths,
-        areasForImprovement: _profile!.areasForImprovement,
-        lastActive: DateTime.now(),
-      );
+      final updated = _profile!.copyWith(learningGoals: updatedGoals);
       await saveProfile(updated);
     }
   }
 
-  void clearProfile() {
+  Future<void> clearProfile() async {
     _profile = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('learning_profile');
     notifyListeners();
   }
 }

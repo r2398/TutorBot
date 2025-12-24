@@ -39,26 +39,30 @@ class PracticeQuestion {
   });
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'question': question,
-    'options': options,
-    'correctAnswer': correctAnswer,
-    'explanation': explanation,
-    'hint': hint,
-    'difficulty': difficulty.name,
-    'concept': concept,
-    'conceptId': conceptId,
-  };
+        'id': id,
+        'question': question,
+        'options': options,
+        'correctAnswer': correctAnswer,
+        'explanation': explanation,
+        'hint': hint,
+        'difficulty': difficulty.name,
+        'concept': concept,
+        'conceptId': conceptId,
+      };
 
-  factory PracticeQuestion.fromJson(Map<String, dynamic> json) => PracticeQuestion(
-    id: json['id'],
-    question: json['question'],
-    options: List<String>.from(json['options']),
-    correctAnswer: json['correctAnswer'],
-    explanation: json['explanation'],
-    hint: json['hint'],
-    difficulty: Difficulty.values.firstWhere((e) => e.name == json['difficulty']),
-    concept: json['concept'],
-    conceptId: json['conceptId'],
-  );
+  factory PracticeQuestion.fromJson(Map<String, dynamic> json) =>
+      PracticeQuestion(
+        id: json['id'],
+        question: json['question'],
+        options: List<String>.from(json['options']),
+        correctAnswer: json['correctAnswer'],
+        explanation: json['explanation'],
+        hint: json['hint'],
+        difficulty: Difficulty.values.firstWhere(
+          (e) => e.name == json['difficulty'],
+          orElse: () => Difficulty.basic, // Fallback to a default value
+        ),
+        concept: json['concept'],
+        conceptId: json['conceptId'],
+      );
 }
