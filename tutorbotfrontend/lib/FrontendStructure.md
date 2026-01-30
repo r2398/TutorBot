@@ -1,7 +1,6 @@
 
 ## **1. Component & Widget Hierarchy**
 
-This section details how widgets are nested to build the application's UI.
 
 ### **A. Root Structure (main.dart)**
 
@@ -36,7 +35,6 @@ MainInterface
 
 ### **C. TutoringView Hierarchy (tutoring_view.dart)**
 
-This is the most complex view, managing three distinct UI modes.
 
 ```
 TutoringView
@@ -67,63 +65,10 @@ TutoringView
         │
         └── Text Input Area (if text mode)
 ```
-
 ---
 
-## **2. File & Folder Organization**
+## **2. Navigation & Data Flow**
 
-The project follows a standard feature-first/layered architecture.
-
-```
-lib/
-├── main.dart                          # App entry point, providers, routing
-│
-├── models/                            # Data structures (POCOs)
-│   ├── learning_profile.dart         # User profile, enums (Grade, Subject)
-│   ├── message.dart                  # Chat message object
-│   └── practice_question.dart        # Practice quiz object
-│
-├── providers/                         # State management (using Provider)
-│   ├── profile_provider.dart         # Manages user profile data
-│   ├── message_provider.dart         # Manages chat history per subject
-│   └── theme_provider.dart           # Manages light/dark mode
-│
-├── views/                             # Top-level screens/pages
-│   ├── onboarding_flow.dart          # Multi-step user setup
-│   ├── main_interface.dart           # Container with bottom navigation
-│   ├── tutoring_view.dart            # Core chat/voice/camera screen
-│   ├── practice_zone.dart            # Quiz/practice interface
-│   ├── badges_view.dart              # Gamification/rewards screen
-│   ├── progress_dashboard.dart       # User stats and settings
-│   └── study_plan_view.dart          # (Not in use) For future study goals
-│
-├── widgets/                           # Reusable UI components
-│   ├── chat_history.dart             # Renders the list of messages
-│   ├── voice_interface_advanced.dart # Full voice-to-text component
-│   ├── camera_interface.dart         # Image capture/preview component
-│   ├── streaming_text.dart           # Typewriter effect for text
-│   ├── typing_indicator.dart         # "..." animation for tutor responses
-│   └── ... (selectors, indicators, etc.)
-│
-├── utils/                             # Helper classes & business logic
-│   ├── tutor_engine.dart             # MOCK: Generates fake AI responses
-│   ├── practice_generator.dart       # MOCK: Generates fake practice questions
-│   ├── topic_data.dart               # Static data for topic suggestions
-│   └── platform_utils.dart           # Platform detection helpers
-│
-└── theme/                             # App styling
-    └── app_theme.dart                # Colors, fonts, button styles, etc.
-
-test/
-├── widget_test.dart                   # Basic widget tests
-└── platform_test.dart                 # Platform-specific rendering tests
-```
-
----
-
-## **3. Navigation & Data Flow**
-
-This section explains how users move through the app and how data is managed.
 
 ### **A. User Navigation Flow**
 
@@ -189,3 +134,55 @@ The app uses the `provider` package for state management, centralizing business 
 8.  **Final UI Rebuild**: `ChatHistory` rebuilds one last time to show the newly available "Hints" section below the tutor's message.
 
 This entire flow ensures that the UI is always a direct reflection of the state held in the providers, and all data is persisted locally for a seamless user experience across sessions.
+
+---
+
+## **3. File & Folder Organization**
+
+Standard feature-first/layered architecture.
+
+```
+lib/
+├── main.dart                          # App entry point, providers, routing
+│
+├── models/                            # Data structures (POCOs)
+│   ├── learning_profile.dart          # User profile, enums (Grade, Subject)
+│   ├── message.dart                   # Chat message object
+│   └── practice_question.dart         # Practice quiz object
+│
+├── providers/                         # State management (using Provider)
+│   ├── profile_provider.dart          # Manages user profile data
+│   ├── message_provider.dart          # Manages chat history per subject
+│   └── theme_provider.dart            # Manages light/dark mode
+│
+├── views/                             # Top-level screens/pages
+│   ├── onboarding_flow.dart           # Multi-step user setup
+│   ├── main_interface.dart            # Container with bottom navigation
+│   ├── tutoring_view.dart             # Core chat/voice/camera screen
+│   ├── practice_zone.dart             # Quiz/practice interface
+│   ├── badges_view.dart               # Gamification/rewards screen
+│   ├── progress_dashboard.dart        # User stats and settings
+│   └── study_plan_view.dart           # (Not in use) For future study goals
+│
+├── widgets/                           # Reusable UI components
+│   ├── chat_history.dart              # Renders the list of messages
+│   ├── voice_interface_advanced.dart  # Full voice-to-text component
+│   ├── camera_interface.dart          # Image capture/preview component
+│   ├── streaming_text.dart            # Typewriter effect for text
+│   ├── typing_indicator.dart          # "..." animation for tutor responses
+│   └── ... (selectors, indicators, etc.)
+│
+├── utils/                             # Helper classes & business logic
+│   ├── tutor_engine.dart              # MOCK: Generates fake AI responses
+│   ├── practice_generator.dart        # MOCK: Generates fake practice questions
+│   ├── topic_data.dart                # Static data for topic suggestions
+│   └── platform_utils.dart            # Platform detection helpers
+│
+└── theme/                             # App styling
+    └── app_theme.dart                 # Colors, fonts, button styles, etc.
+
+test/
+├── widget_test.dart                   # Basic widget tests
+└── platform_test.dart                 # Platform-specific rendering tests
+
+```
