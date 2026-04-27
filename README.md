@@ -2,7 +2,7 @@
 # TutorAnna - Multilingual AI Tutor for Grades 6–12
 
 ## Overview
-TutorAnna is a comprehensive, voice-first AI tutor designed to provide personalized academic support for students in Grades 6–12 across Mathematics, Science, and Social Science.
+TutorAnna is a comprehensive, voice-first AI tutor designed to provide personalized academic support for students in Grades 6–12 across Mathematics, Science, and Social Science. In Tamil, the term "Anna" (அண்ணா - An-naa) holds a rich and multifaceted meaning. It is a word commonly used to address or refer to an elder brother or a person in a position of brotherly affection and guidance.
 
 ## Key Features Implemented
 
